@@ -1,130 +1,216 @@
-<<<<<<< HEAD
-🚀 Zecpath – AI-Powered Job Portal & Automated Hiring Assistant
+# 🚀 Zecpath – AI-Powered Job Portal & Automated Hiring Assistant
 
-📌 Internship learning log — documenting my progress as I ramp up on the
-Zecpath product and the Python/Django skills needed to build it.
+📌 **Internship Learning Log** — documenting my daily progress while building the backend for **Zecpath**, an AI-powered recruitment platform using **Python** and **Django**.
 
+---
 
-📅 Day 1 — Product & Hiring Domain Understanding 🧠
+# 📅 Day 1 — Product & Hiring Domain Understanding 🧠
 
-🎯 Goal: Understand what Zecpath is, who it's for, and how the
-end-to-end hiring pipeline works — before writing any code.
+### 🎯 Goal
 
-✅ What I did:
+Understand the Zecpath product, hiring workflow, and system architecture before writing code.
 
+### ✅ What I Learned
 
-📖 Studied the full Zecpath PRD (Phases 1–100)
-👥 Identified the users: Candidates, Recruiters/Employers, Admin
-🧩 Broke the product into core modules: Auth, Job Management, ATS,
-AI Screening, Interview & Offer flow
-🔄 Mapped the full hiring flow: Application → ATS Screening → AI Call
-→ Interview → Shortlisting → Offer
-📚 Learned key domain concepts: Job Portal vs. ATS vs. AI-based hiring,
-manual vs. automated hiring, with real-world references (Naukri,
-LinkedIn, Indeed, Greenhouse)
-🏗️ Thought through the system architecture: Frontend, Backend, AI
-Services, Database, Cloud & Storage
+* 📖 Studied the complete Zecpath Product Requirement Document (Phases 1–100)
+* 👥 Identified the three primary users:
 
+  * Candidates
+  * Recruiters/Employers
+  * Admin
+* 🧩 Understood the core modules:
 
-📦 Deliverables:
+  * Authentication
+  * Job Management
+  * ATS
+  * AI Screening
+  * Interview Flow
+  * Offer Management
+* 🔄 Mapped the complete hiring pipeline:
 
+  * Application
+  * ATS Screening
+  * AI Screening Call
+  * Interview
+  * Shortlisting
+  * Offer Letter
+* 📚 Learned the differences between:
 
-📝 Product Understanding Document
-🗺️ System flow diagram
-📋 List of main system modules
+  * Job Portal
+  * ATS (Applicant Tracking System)
+  * AI-powered Hiring
+* 🌍 Explored real-world hiring platforms:
 
+  * LinkedIn
+  * Naukri
+  * Indeed
+  * Greenhouse
+* 🏗️ Understood the overall backend architecture:
 
+  * Frontend
+  * Backend
+  * AI Services
+  * Database
+  * Cloud & Storage
 
-📅 Day 2 — Python & Backend Basics Refresh 🐍
+### 📦 Deliverables
 
-🎯 Goal: Strengthen Python fundamentals and backend/API concepts
-needed for Django development.
+* 📝 Product Understanding Document
+* 🗺️ Hiring Workflow Diagram
+* 📋 System Module Breakdown
 
-✅ What I did:
+---
 
+# 📅 Day 2 — Python & Backend Fundamentals 🐍
 
-🔁 Revised Python basics: variables, loops, functions
-🏛️ Practiced OOP: class, object, inheritance, encapsulation
-⚠️ Practiced exception handling
-💻 Set up my dev environment: Python, pip, venv, VS Code (+ Python &
-Pylance extensions), Postman
-🌐 Learned backend & API concepts: what is a server, what is an API,
-REST architecture, HTTP methods, request/response cycle, status
-codes, JSON structure
-📡 Sent test requests to a public API (JSONPlaceholder) using Postman
+### 🎯 Goal
 
+Strengthen Python and backend concepts required for Django development.
 
-🛠️ Mini exercises built:
+### ✅ What I Learned
 
-#ScriptConcepts1️⃣1_student_oop.pyClass, object, inheritance, encapsulation2️⃣2_calculator.pyFunctions, loops, exception handling3️⃣3_file_reader.pyFile read/write, exception handling4️⃣4_crud_simulation.pyCRUD simulation on in-memory data5️⃣5_json_read_write.pyJSON read/write, serialization
+* 🔁 Revised Python fundamentals
 
-📦 Deliverables:
+  * Variables
+  * Loops
+  * Functions
+* 🏛️ Practiced Object-Oriented Programming
 
+  * Classes
+  * Objects
+  * Inheritance
+  * Encapsulation
+* ⚠️ Learned Exception Handling
+* 💻 Configured development environment
 
-🐍 Python mini exercises (this repo!)
-📑 REST API concept notes
-📸 Working dev environment screenshots
+  * Python
+  * pip
+  * Virtual Environment
+  * VS Code
+  * Postman
+* 🌐 Learned backend concepts
 
+  * Server
+  * REST API
+  * HTTP Methods
+  * Request & Response Cycle
+  * Status Codes
+  * JSON
+* 📡 Tested APIs using JSONPlaceholder in Postman
 
+### 🛠️ Mini Exercises
 
-🧭 What's Next
+* Student OOP System
+* Calculator Application
+* File Reader
+* CRUD Simulation
+* JSON Read & Write
 
-➡️ Moving into Django & Django REST Framework to start building the
-actual Zecpath backend: authentication, job management, and the ATS
-module. 🏗️
+### 📦 Deliverables
 
+* Python practice programs
+* REST API notes
+* Development environment setup
 
-⭐ This repo is a running log — new folders/commits will be added as
-each day of the internship progresses.
-=======
-# Zecpath Backend (Django) — Day 3
+---
 
-Minimal Django project created for Day 3 of the Zecpath internship,
-covering Django installation, MVT architecture, and a first working
-API endpoint.
+# 📅 Day 3 — Django Project Setup & First API 🚀
 
-## Setup
+### 🎯 Goal
 
-```bash
-python3 -m venv day3_env
-source day3_env/bin/activate      # macOS/Linux
-day3_env\Scripts\activate         # Windows
+Set up the Django backend and understand the MVT architecture.
 
-pip install -r requirements.txt
+### ✅ What I Learned
 
-python manage.py migrate
-python manage.py runserver
+* ⚙️ Installed Django and created the first project
+* 🏗️ Understood Django's MVT (Model-View-Template) architecture
+* 📁 Learned Django project structure
+* 📦 Created the first Django application
+* 🔗 Configured project-level and app-level URLs
+* 🌐 Built the first API endpoint
+
+```
+GET /api/
+
+Response
+
+{
+    "message": "Hello Zecpath Backend"
+}
 ```
 
-## Endpoint
+* ▶️ Successfully ran the Django development server
+* 🧪 Tested the API using Postman and cURL
 
-| Method | URL | Response |
-|---|---|---|
-| GET | `/api/` | `{"message": "Hello Zecpath Backend"}` |
+### 📦 Deliverables
 
-Visit http://127.0.0.1:8000/api/ after starting the server, or test it
-in Postman/curl:
+* Django Project Setup
+* First Working API
+* Django Structure Documentation
 
-```bash
-curl http://127.0.0.1:8000/api/
-```
+---
 
-## Project Structure
+# 📅 Day 4 — Django ORM, Models & Admin Panel 🗄️
 
-```
-zecpath_backend/
-├── manage.py
-├── requirements.txt
-├── core/                     # our first Django app
-│   ├── views.py              # Home API view
-│   ├── urls.py                # app-level routing
-│   └── models.py
-└── zecpath_backend/           # project config package
-    ├── settings.py
-    ├── urls.py                 # project-level routing (includes core.urls)
-    └── wsgi.py / asgi.py
-```
+### 🎯 Goal
 
-See `Django_Structure_Explanation.md` (in the Day 3 deliverables folder)
-for a full breakdown of how these pieces fit together.
->>>>>>> cc03a3f (day 3)
+Learn how Django communicates with databases using the ORM and build the project's first database models.
+
+### ✅ What I Learned
+
+* 🧠 Understood Object Relational Mapping (ORM)
+* 🔄 Learned how Django converts Python code into SQL queries
+* ⚖️ Compared Raw SQL with Django ORM
+* 🏗️ Designed the first database schema
+* 🧩 Built three interconnected models:
+
+  * User
+  * Job
+  * Application
+* 🔗 Implemented ForeignKey relationships
+* 📝 Explored Django model field types:
+
+  * CharField
+  * EmailField
+  * TextField
+  * ForeignKey
+  * DateTimeField
+* 🛠️ Generated database migrations
+* 💾 Applied migrations to SQLite
+* 👨‍💻 Created and configured Django Admin
+* 🔍 Registered all models with:
+
+  * list_display
+  * search_fields
+  * list_filter
+* 👤 Created a Django Superuser
+* ✅ Verified complete CRUD operations through both:
+
+  * Django ORM
+  * Django Admin Panel
+
+### 📦 Deliverables
+
+* Django ORM Notes
+* Database Models
+* Initial Database Schema
+* Migration Files
+* Configured Django Admin Panel
+* CRUD Verification
+
+---
+
+# 🎯 What's Next
+
+➡️ Build the core backend modules for Zecpath:
+
+* 🔐 User Authentication
+* 💼 Job Management APIs
+* 📄 Job Applications
+* 📊 ATS Scoring Module
+* 🤖 AI Hiring Workflow
+* 🔗 Django REST Framework Integration
+
+---
+
+⭐ This repository serves as my internship learning journal. New commits and folders will be added as I continue developing the Zecpath backend day by day.
