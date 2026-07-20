@@ -51,28 +51,23 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.name} ({self.role})"
 
 
-class Employer(models.Model):
-    """One-to-one profile extension of User for recruiter/employer accounts."""
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="employer_profile"
-    )
-    company_name = models.CharField(max_length=200)
-    website = models.URLField(blank=True)
-
-    def __str__(self):
-        return self.company_name
-
-
 class Candidate(models.Model):
-    """One-to-one profile extension of User for candidate accounts."""
-    user = models.OneToOneField(
-        User, on_delete=models.CASCADE, related_name="candidate_profile"
-    )
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="candidate_profile")
     resume = models.FileField(upload_to="resumes/", blank=True)
     skills = models.TextField(blank=True)
+    education = models.TextField(blank=True)
+    experience = models.TextField(blank=True)
+    expected_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    is_deleted = models.BooleanField(default=False)  # soft delete
 
-    def __str__(self):
-        return self.user.name
+class Employer(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employer_profile")
+    company_name = models.CharField(max_length=200)
+    website = models.URLField(blank=True)
+    domain = models.CharField(max_length=100, blank=True)
+    company_size = models.CharField(max_length=50, blank=True)
+    is_verified = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)  # soft delete
 
 
 class Job(models.Model):

@@ -4,8 +4,8 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
-from .models import Job, User
-from .serializers import JobSerializer, UserSerializer, SignupSerializer, ApplicationSerializer
+from .models import Job, User ,Employer
+from .serializers import JobSerializer, UserSerializer, SignupSerializer, ApplicationSerializer,CandidateProfileSerializer, EmployerProfileSerializer
 from .permissions import IsEmployer, IsCandidate, IsAdmin
 
 
@@ -95,3 +95,67 @@ class LogoutAPIView(APIView):
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+#-------------------------------------------------------------------------------
+# ---------- Profiles ----------
+
+class CandidateProfileAPIView(APIView):
+    permission_classes = [IsCandidate]
+
+    def get(self, request):
+        profile = request.user.candidate_profile
+        return Response(CandidateProfileSerializer(profile).data)
+
+    def patch(self, request):
+        profile = request.user.candidate_profile
+        serializer = CandidateProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        profile = request.user.candidate_profile
+        profile.is_deleted = True
+        profile.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EmployerProfileAPIView(APIView):
+    permission_classes = [IsEmployer]
+
+    def get(self, request):
+        profile = request.user.employer_profile
+        return Response(EmployerProfileSerializer(profile).data)
+
+    def patch(self, request):
+        profile = request.user.employer_profile
+        serializer = EmployerProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request):
+        profile = request.user.employer_profile
+        profile.is_deleted = True
+        profile.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+
+
+
+class AdminVerifyEmployerAPIView(APIView):
+    permission_classes = [IsAdmin]
+
+    def patch(self, request, employer_id):
+        try:
+            employer = Employer.objects.get(id=employer_id)
+        except Employer.DoesNotExist:
+            return Response({"detail": "Not found"}, status=status.HTTP_404_NOT_FOUND)
+        employer.is_verified = True
+        employer.save()
+        return Response(EmployerProfileSerializer(employer).data)

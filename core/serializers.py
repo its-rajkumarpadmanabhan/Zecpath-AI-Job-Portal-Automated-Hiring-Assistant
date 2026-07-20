@@ -1,6 +1,19 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import User,Job,Application
+
+from .models import User, Job, Application, Candidate, Employer
+
+class CandidateProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candidate
+        fields = ['id', 'skills', 'education', 'experience', 'expected_salary', 'resume', 'is_deleted']
+        read_only_fields = ['id', 'is_deleted']  # deletion happens via the DELETE action, not PATCH
+
+class EmployerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Employer
+        fields = ['id', 'company_name', 'website', 'domain', 'company_size', 'is_verified', 'is_deleted']
+        read_only_fields = ['id', 'is_verified', 'is_deleted']  # only admin can verify, not self-edit
 
 class JobSerializer(serializers.ModelSerializer):
     class Meta:

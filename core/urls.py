@@ -16,4 +16,8 @@ urlpatterns = [
     path('auth/logout/', LogoutAPIView.as_view(), name='logout'),
 
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+
+    path('profile/candidate/', CandidateProfileAPIView.as_view(), name='candidate-profile'),
+    path('profile/employer/', EmployerProfileAPIView.as_view(), name='employer-profile'),
+    path('admin/employers/<int:employer_id>/verify/', AdminVerifyEmployerAPIView.as_view(), name='admin-verify-employer'),
 ]
