@@ -1,3 +1,7 @@
+import os
+
+from .models import Candidate
+
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 
@@ -40,3 +44,22 @@ class ApplicationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = ['id', 'job', 'status', 'applied_at']  # candidate is set server-side, not from input
+
+class ResumeUploadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Candidate
+        fields = ['resume']
+
+    def validate_resume(self, value):
+        # 1. Size Validation (Max 5MB)
+        max_size_mb = 5
+        if value.size > max_size_mb * 1024 * 1024:
+            raise serializers.ValidationError(f"File size cannot exceed {max_size_mb}MB.")
+
+        # 2. File Extension Validation
+        ext = os.path.splitext(value.name)[1].lower()
+        valid_extensions = ['.pdf', '.doc', '.docx']
+        if ext not in valid_extensions:
+            raise serializers.ValidationError("Only PDF, DOC, and DOCX file formats are allowed.")
+
+        return value

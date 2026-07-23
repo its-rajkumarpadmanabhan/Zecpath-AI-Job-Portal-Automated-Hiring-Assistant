@@ -1,12 +1,22 @@
+import os
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 
+
+
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import IsAuthenticated
+from .permissions import IsCandidate
+from .serializers import ResumeUploadSerializer
+
 from .models import Job, User ,Employer
 from .serializers import JobSerializer, UserSerializer, SignupSerializer, ApplicationSerializer,CandidateProfileSerializer, EmployerProfileSerializer
 from .permissions import IsEmployer, IsCandidate, IsAdmin
+
 
 
 # ---------- Jobs ----------
@@ -159,3 +169,28 @@ class AdminVerifyEmployerAPIView(APIView):
         employer.is_verified = True
         employer.save()
         return Response(EmployerProfileSerializer(employer).data)
+
+
+
+# ---------- Resume Upload API View ----------
+
+class ResumeUploadAPIView(APIView):
+    permission_classes = [IsAuthenticated, IsCandidate]
+    parser_classes = [MultiPartParser, FormParser]  # Required for handling file uploads
+
+    def post(self, request):
+        candidate = request.user.candidate_profile
+
+        # Delete previous physical file if replacing an existing resume
+        if candidate.resume and os.path.isfile(candidate.resume.path):
+            os.remove(candidate.resume.path)
+
+        serializer = ResumeUploadSerializer(candidate, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Resume uploaded successfully!",
+                "resume_url": candidate.resume.url
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

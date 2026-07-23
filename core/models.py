@@ -1,3 +1,5 @@
+import os
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
@@ -50,15 +52,21 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.name} ({self.role})"
 
+def candidate_resume_path(instance, filename):
+    # Extract file extension (e.g. .pdf, .docx)
+    ext = filename.split('.')[-1]
+    # Unique filename using UUID: e.g. resumes/candidate_1_a1b2c3d4.pdf
+    filename = f"candidate_{instance.user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    return os.path.join('resumes', filename)
 
 class Candidate(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="candidate_profile")
-    resume = models.FileField(upload_to="resumes/", blank=True)
+    resume = models.FileField(upload_to=candidate_resume_path, blank=True, null=True)
     skills = models.TextField(blank=True)
     education = models.TextField(blank=True)
     experience = models.TextField(blank=True)
     expected_salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    is_deleted = models.BooleanField(default=False)  # soft delete
+    is_deleted = models.BooleanField(default=False)
 
 class Employer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employer_profile")
