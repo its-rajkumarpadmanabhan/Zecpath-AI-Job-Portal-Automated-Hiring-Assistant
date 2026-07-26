@@ -63,3 +63,9 @@ class ResumeUploadSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Only PDF, DOC, and DOCX file formats are allowed.")
 
         return value
+
+
+
+# Aliases for detailed view serializers
+FullCandidateDetailSerializer = CandidateProfileSerializer
+FullEmployerDetailSerializer = EmployerProfileSerializer

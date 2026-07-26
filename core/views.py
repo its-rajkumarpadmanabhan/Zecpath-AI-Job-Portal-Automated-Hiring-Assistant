@@ -5,19 +5,64 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-
-
-
+from rest_framework import status, permissions
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.generics import ListAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from .permissions import IsCandidate
 from .serializers import ResumeUploadSerializer
-
-from .models import Job, User ,Employer
-from .serializers import JobSerializer, UserSerializer, SignupSerializer, ApplicationSerializer,CandidateProfileSerializer, EmployerProfileSerializer
+from rest_framework.filters import SearchFilter, OrderingFilter
+from .models import Job, User ,Employer,Candidate
+from .serializers import *
+from .serializers import JobSerializer, FullCandidateDetailSerializer, FullEmployerDetailSerializer
+from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import IsEmployer, IsCandidate, IsAdmin
 
 
+# 1. Job List API View (Paginated, Searchable & Filterable)
+class JobListAPIView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = JobSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
+    # Filtering parameters
+    filterset_fields = ['is_active', 'location']
+
+    # Keyword Search fields
+    search_fields = ['title', 'description', 'location']
+
+    # Ordering fields
+    ordering_fields = ['created_at', 'salary']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        # select_related avoids N+1 queries when accessing employer/user relationship
+        return Job.objects.filter(is_deleted=False).select_related('employer', 'employer__user')
+
+# Update CandidateDetailListView:
+class CandidateDetailListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CandidateProfileSerializer  # Updated name
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['is_deleted']
+    search_fields = ['user__name', 'user__email', 'skills']
+    ordering_fields = ['id']
+
+    def get_queryset(self):
+        return Candidate.objects.filter(is_deleted=False).select_related('user')
+
+# Update EmployerDetailListView:
+class EmployerDetailListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = EmployerProfileSerializer  # Updated name
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['is_verified', 'is_deleted', 'domain']
+    search_fields = ['company_name', 'domain', 'user__email']
+    ordering_fields = ['company_name']
+
+    def get_queryset(self):
+        return Employer.objects.filter(is_deleted=False).select_related('user')
 
 # ---------- Jobs ----------
 
@@ -175,22 +220,59 @@ class AdminVerifyEmployerAPIView(APIView):
 # ---------- Resume Upload API View ----------
 
 class ResumeUploadAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsCandidate]
-    parser_classes = [MultiPartParser, FormParser]  # Required for handling file uploads
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         candidate = request.user.candidate_profile
+        file_obj = request.FILES.get('resume')
 
-        # Delete previous physical file if replacing an existing resume
-        if candidate.resume and os.path.isfile(candidate.resume.path):
-            os.remove(candidate.resume.path)
+        if not file_obj:
+            return Response({"error": "No resume file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = ResumeUploadSerializer(candidate, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                "message": "Resume uploaded successfully!",
-                "resume_url": candidate.resume.url
-            }, status=status.HTTP_200_OK)
+        # File Size Validation (Max 5MB)
+        if file_obj.size > 5 * 1024 * 1024:
+            return Response({"error": "File size exceeds 5MB limit."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Extension Validation
+        ext = file_obj.name.split('.')[-1].lower()
+        if ext not in ['pdf', 'doc', 'docx']:
+            return Response({"error": "Unsupported file format. Allowed: .pdf, .doc, .docx"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Safely remove old physical file if replacing
+        if bool(candidate.resume):
+            try:
+                if os.path.isfile(candidate.resume.path):
+                    os.remove(candidate.resume.path)
+            except (ValueError, FileNotFoundError):
+                pass  # Skip if no physical file exists on disk
+
+        candidate.resume = file_obj
+        candidate.save()
+
+        return Response({
+            "message": "Resume uploaded successfully!",
+            "resume_url": candidate.resume.url
+        }, status=status.HTTP_200_OK)
+
+
+
+    # Create or use a standard pagination class
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+class JobListAPIView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = JobSerializer
+    pagination_class = StandardResultsSetPagination  # Enforces paginated wrapper
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+
+    filterset_fields = ['company', 'title']
+    search_fields = ['title', 'description', 'company']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        return Job.objects.all().order_by('-created_at')
