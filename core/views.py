@@ -3,6 +3,8 @@ import os
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from .permissions import IsEmployer, IsEmployerAndOwner
+from rest_framework.generics import CreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework import status, permissions
@@ -18,6 +20,13 @@ from .serializers import *
 from .serializers import JobSerializer, FullCandidateDetailSerializer, FullEmployerDetailSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import IsEmployer, IsCandidate, IsAdmin
+
+from rest_framework import generics, filters
+from rest_framework.permissions import AllowAny
+from django_filters.rest_framework import DjangoFilterBackend
+from .models import Job
+from .serializers import JobSerializer
+from core import JobFilter
 
 
 # 1. Job List API View (Paginated, Searchable & Filterable)
@@ -276,3 +285,47 @@ class JobListAPIView(ListAPIView):
 
     def get_queryset(self):
         return Job.objects.all().order_by('-created_at')
+
+from rest_framework.exceptions import NotFound
+
+class EmployerJobCreateAPIView(CreateAPIView):
+    permission_classes = [IsAuthenticated, IsEmployer]
+    serializer_class = JobSerializer
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not user or not user.is_authenticated:
+            raise NotFound("User account not found.")
+        serializer.save(employer=user)
+
+class EmployerJobDetailAPIView(RetrieveUpdateDestroyAPIView):
+    """Allows recruiters to retrieve, update, or deactivate/close jobs they own."""
+    permission_classes = [IsAuthenticated, IsEmployerAndOwner]
+    serializer_class = JobSerializer
+    queryset = Job.objects.all()
+
+
+
+
+
+
+class PublicJobListAPIView(generics.ListAPIView):
+    """
+    Public API for candidates to list, filter, and search active jobs.
+    Supports filtering by skill, location, salary range, job type, and keyword search.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = JobSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = JobFilter
+    
+    # Keyword search across title, company, skills, and description
+    search_fields = ['title', 'company', 'skills_required', 'description']
+    
+    # Ordering support (e.g., latest jobs first)
+    ordering_fields = ['created_at', 'salary_min', 'salary_max']
+    ordering = ['-created_at']  # Latest jobs by default
+
+    def get_queryset(self):
+        # Only return active jobs to job seekers
+        return Job.objects.filter(status='active').select_related('employer')

@@ -22,5 +22,10 @@ urlpatterns = [
     path('admin/employers/<int:employer_id>/verify/', AdminVerifyEmployerAPIView.as_view(), name='admin-verify-employer'),
 
     path('profile/candidate/resume/', ResumeUploadAPIView.as_view(), name='resume-upload'),
+
+    path('employer/jobs/create/', EmployerJobCreateAPIView.as_view(), name='employer-job-create'),
+    path('employer/jobs/<int:pk>/', EmployerJobDetailAPIView.as_view(), name='employer-job-detail'),
+
+    path('jobs/', PublicJobListAPIView.as_view(), name='public-job-list'),
     
 ]

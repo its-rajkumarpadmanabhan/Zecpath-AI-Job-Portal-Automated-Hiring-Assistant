@@ -8,13 +8,11 @@ class UserAdmin(admin.ModelAdmin):
     list_filter = ("role",)
     search_fields = ("name", "email")
 
-
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):
-    list_display = ("id", "title", "company", "posted_by", "created_at")
-    list_filter = ("company",)
-    search_fields = ("title", "company")
-
+    list_display = ('id', 'title', 'company', 'employer', 'status', 'created_at')
+    list_filter = ('status', 'job_type', 'created_at')
+    search_fields = ('title', 'company', 'skills_required', 'description')
 
 @admin.register(Application)
 class ApplicationAdmin(admin.ModelAdmin):

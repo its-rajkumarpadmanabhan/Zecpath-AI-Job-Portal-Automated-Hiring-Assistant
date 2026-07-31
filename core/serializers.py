@@ -20,10 +20,16 @@ class EmployerProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_verified', 'is_deleted']  # only admin can verify, not self-edit
 
 class JobSerializer(serializers.ModelSerializer):
+    employer_email = serializers.ReadOnlyField(source='employer.email')
+
     class Meta:
         model = Job
-        fields = ['id', 'title', 'company', 'description', 'posted_by', 'created_at']
-        read_only_fields = ['posted_by']
+        fields = [
+            'id', 'employer', 'employer_email', 'title', 'company', 'description', 
+            'skills_required', 'experience_required', 'salary_min', 'salary_max', 
+            'location', 'job_type', 'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'employer', 'created_at', 'updated_at']
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
