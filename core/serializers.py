@@ -5,7 +5,7 @@ from .models import Candidate
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 
-from .models import User, Job, Application, Candidate, Employer
+from .models import User, Job, Application, Candidate, Employer,ApplicationAuditLog
 
 class CandidateProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -105,3 +105,55 @@ class ApplicationDetailSerializer(serializers.ModelSerializer):
 # Aliases for detailed view serializers
 FullCandidateDetailSerializer = CandidateProfileSerializer
 FullEmployerDetailSerializer = EmployerProfileSerializer
+
+class ApplicationStatusUpdateSerializer(serializers.ModelSerializer):
+    notes = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    # Updated to match your exact Application model STATUS_CHOICES
+    VALID_TRANSITIONS = {
+        'applied': ['under_review', 'shortlisted', 'rejected'],
+        'under_review': ['shortlisted', 'rejected'],
+        'shortlisted': ['hired', 'rejected'],
+        'hired': [],     # Terminal stage (locked)
+        'rejected': []    # Terminal stage (locked)
+    }
+
+    class Meta:
+        model = Application
+        fields = ['status', 'notes']
+
+    def validate_status(self, value):
+        current_status = self.instance.status
+
+        # 1. Lock check for terminal states
+        if current_status in ['hired', 'rejected']:
+            raise serializers.ValidationError(
+                f"Cannot modify application. Stage is locked at '{current_status}'."
+            )
+
+        # 2. Validate allowed status transition
+        allowed_next_statuses = self.VALID_TRANSITIONS.get(current_status, [])
+        if value not in allowed_next_statuses:
+            raise serializers.ValidationError(
+                f"Invalid transition from '{current_status}' to '{value}'."
+            )
+
+        return value
+
+    def update(self, instance, validated_data):
+        notes = validated_data.pop('notes', '')
+        old_status = instance.status
+        new_status = validated_data.get('status', old_status)
+
+        instance.status = new_status
+        instance.save()
+
+        ApplicationAuditLog.objects.create(
+            application=instance,
+            previous_status=old_status,
+            new_status=new_status,
+            performed_by=self.context['request'].user,
+            notes=notes
+        )
+
+        return instance

@@ -20,6 +20,10 @@ from .serializers import *
 from .serializers import JobSerializer, FullCandidateDetailSerializer, FullEmployerDetailSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from .permissions import IsEmployer, IsCandidate, IsAdmin
+from rest_framework.generics import UpdateAPIView
+from rest_framework.permissions import IsAuthenticated
+from .models import Application
+from .serializers import ApplicationStatusUpdateSerializer
 
 from rest_framework import generics, filters
 from rest_framework.permissions import AllowAny
@@ -304,7 +308,26 @@ class EmployerJobDetailAPIView(RetrieveUpdateDestroyAPIView):
     serializer_class = JobSerializer
     queryset = Job.objects.all()
 
+from django.shortcuts import get_object_or_404
 
+class ApplicationStatusUpdateAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        application = get_object_or_404(Application, pk=pk)
+        serializer = ApplicationStatusUpdateSerializer(
+            application, 
+            data=request.data, 
+            partial=True,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        
+        return Response({
+            "message": "Status updated successfully",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
 
 
 
@@ -360,3 +383,5 @@ class CandidateApplicationListAPIView(generics.ListAPIView):
     def get_queryset(self):
         # Ownership check: Candidates can only access their own applications
         return Application.objects.filter(candidate=self.request.user).select_related('job')
+
+

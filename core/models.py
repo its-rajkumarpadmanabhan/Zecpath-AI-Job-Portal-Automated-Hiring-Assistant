@@ -79,6 +79,7 @@ class Employer(models.Model):
     is_deleted = models.BooleanField(default=False)  # soft delete
 
 
+
 class Job(models.Model):
     JOB_TYPES = (
         ('full_time', 'Full Time'),
@@ -116,6 +117,25 @@ class Job(models.Model):
     def __str__(self):
         return f"{self.title} at {self.company}"
 
+class ApplicationAuditLog(models.Model):
+    application = models.ForeignKey(
+        'Application', 
+        on_delete=models.CASCADE, 
+        related_name='audit_logs'
+    )
+    previous_status = models.CharField(max_length=50)
+    new_status = models.CharField(max_length=50)
+    performed_by = models.ForeignKey(
+        'User', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True
+    )
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"App #{self.application_id}: {self.previous_status} -> {self.new_status}"
 
 class Application(models.Model):
     STATUS_CHOICES = (

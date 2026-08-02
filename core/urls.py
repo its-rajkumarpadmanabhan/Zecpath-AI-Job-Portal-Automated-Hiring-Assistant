@@ -29,4 +29,6 @@ urlpatterns = [
     path('applications/apply/', ApplyJobAPIView.as_view(), name='apply-job'),
     path('applications/history/', CandidateApplicationListAPIView.as_view(), name='application-history'),
 
+    path('employer/applications/<int:pk>/status/', ApplicationStatusUpdateAPIView.as_view(), name='employer-application-status-update'),
+
 ]
