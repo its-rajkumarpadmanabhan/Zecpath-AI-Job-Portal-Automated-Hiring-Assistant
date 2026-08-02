@@ -25,4 +25,8 @@ urlpatterns = [
     path('applications/create/', ApplicationCreateAPIView.as_view(), name='application-create'),
     path('admin/users/', AdminUserListAPIView.as_view(), name='admin-users'),
     path('admin/employers/<int:employer_id>/verify/', AdminVerifyEmployerAPIView.as_view(), name='admin-verify-employer'),
+
+    path('applications/apply/', ApplyJobAPIView.as_view(), name='apply-job'),
+    path('applications/history/', CandidateApplicationListAPIView.as_view(), name='application-history'),
+
 ]

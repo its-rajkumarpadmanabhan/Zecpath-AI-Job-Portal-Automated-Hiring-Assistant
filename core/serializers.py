@@ -70,7 +70,37 @@ class ResumeUploadSerializer(serializers.ModelSerializer):
 
         return value
 
+class ApplicationCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Application
+        fields = ['id', 'job', 'applied_at', 'status']
+        read_only_fields = ['id', 'applied_at', 'status']
 
+    def validate_job(self, value):
+        # Job status check
+        if value.status != 'active':
+            raise serializers.ValidationError("You can only apply to active job listings.")
+        return value
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+        job = attrs['job']
+        
+        # Duplicate application prevention
+        if Application.objects.filter(candidate=user, job=job).exists():
+            raise serializers.ValidationError({"detail": "You have already applied for this job."})
+        
+        return attrs
+
+
+class ApplicationDetailSerializer(serializers.ModelSerializer):
+    job_title = serializers.CharField(source='job.title', read_only=True)
+    company = serializers.CharField(source='job.company', read_only=True)
+    location = serializers.CharField(source='job.location', read_only=True)
+
+    class Meta:
+        model = Application
+        fields = ['id', 'job', 'job_title', 'company', 'location', 'status', 'applied_at', 'resume_snapshot']
 
 # Aliases for detailed view serializers
 FullCandidateDetailSerializer = CandidateProfileSerializer

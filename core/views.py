@@ -324,3 +324,39 @@ class PublicJobListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         return Job.objects.filter(status='active').select_related('employer')
+
+class IsCandidatePermission(permissions.BasePermission):
+    """
+    Custom permission to ensure only candidates can submit applications.
+    """
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role == 'candidate'
+
+class ApplyJobAPIView(generics.CreateAPIView):
+    """
+    API for candidates to apply for an active job.
+    """
+    serializer_class = ApplicationCreateSerializer
+    permission_classes = [IsCandidatePermission]
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        
+        # Bind candidate profile's uploaded resume as a snapshot if available
+        resume = None
+        if hasattr(user, 'candidate_profile') and user.candidate_profile.resume:
+            resume = user.candidate_profile.resume
+
+        serializer.save(candidate=user, resume_snapshot=resume)
+
+
+class CandidateApplicationListAPIView(generics.ListAPIView):
+    """
+    API for candidates to view their application history / tracking list.
+    """
+    serializer_class = ApplicationDetailSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Ownership check: Candidates can only access their own applications
+        return Application.objects.filter(candidate=self.request.user).select_related('job')
