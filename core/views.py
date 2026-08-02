@@ -26,7 +26,7 @@ from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Job
 from .serializers import JobSerializer
-from core import JobFilter
+from core.filters import JobFilter
 
 
 # 1. Job List API View (Paginated, Searchable & Filterable)
@@ -308,24 +308,19 @@ class EmployerJobDetailAPIView(RetrieveUpdateDestroyAPIView):
 
 
 
-
 class PublicJobListAPIView(generics.ListAPIView):
     """
     Public API for candidates to list, filter, and search active jobs.
-    Supports filtering by skill, location, salary range, job type, and keyword search.
     """
-    permission_classes = [AllowAny]
+    authentication_classes = []  # <-- Disables token requirement for this endpoint
+    permission_classes = [AllowAny]  # <-- Allows public unauthenticated access
+    
     serializer_class = JobSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = JobFilter
-    
-    # Keyword search across title, company, skills, and description
     search_fields = ['title', 'company', 'skills_required', 'description']
-    
-    # Ordering support (e.g., latest jobs first)
     ordering_fields = ['created_at', 'salary_min', 'salary_max']
-    ordering = ['-created_at']  # Latest jobs by default
+    ordering = ['-created_at']
 
     def get_queryset(self):
-        # Only return active jobs to job seekers
         return Job.objects.filter(status='active').select_related('employer')
