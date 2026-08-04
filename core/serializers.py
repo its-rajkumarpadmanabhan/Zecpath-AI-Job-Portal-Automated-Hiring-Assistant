@@ -157,3 +157,25 @@ class ApplicationStatusUpdateSerializer(serializers.ModelSerializer):
         )
 
         return instance
+
+
+class EmployerDashboardAnalyticsSerializer(serializers.Serializer):
+    total_jobs_posted = serializers.IntegerField()
+    active_jobs_count = serializers.IntegerField()
+    total_applications_received = serializers.IntegerField()
+    shortlist_ratio = serializers.FloatField()
+    applications_by_status = serializers.DictField()
+
+
+class EmployerApplicantListSerializer(serializers.ModelSerializer):
+    candidate_id = serializers.IntegerField(source='candidate.id', read_only=True)
+    candidate_name = serializers.CharField(source='candidate.name', read_only=True)
+    candidate_email = serializers.CharField(source='candidate.email', read_only=True)
+    job_title = serializers.CharField(source='job.title', read_only=True)
+
+    class Meta:
+        model = Application
+        fields = [
+            'id', 'candidate_id', 'candidate_name', 'candidate_email', 
+            'job', 'job_title', 'status', 'applied_at', 'resume_snapshot'
+        ]

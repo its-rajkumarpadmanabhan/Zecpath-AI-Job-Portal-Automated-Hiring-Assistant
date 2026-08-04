@@ -24,7 +24,19 @@ from rest_framework.generics import UpdateAPIView
 from rest_framework.permissions import IsAuthenticated
 from .models import Application
 from .serializers import ApplicationStatusUpdateSerializer
+from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404
 
+from .models import Job, Application
+from .permissions import IsEmployer
+from .serializers import (
+    JobSerializer, 
+    EmployerApplicantListSerializer, 
+    EmployerDashboardAnalyticsSerializer)
 from rest_framework import generics, filters
 from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
@@ -385,3 +397,74 @@ class CandidateApplicationListAPIView(generics.ListAPIView):
         return Application.objects.filter(candidate=self.request.user).select_related('job')
 
 
+# 1. Employer Own Jobs Management API
+class EmployerMyJobsAPIView(ListAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+    serializer_class = JobSerializer
+
+    def get_queryset(self):
+        # Removed non-existent 'is_deleted' filter
+        return Job.objects.filter(
+            employer=self.request.user
+        ).order_by('-created_at')
+
+
+# 2. Employer Candidate Pipeline & Applicant Filtering API
+class EmployerCandidatePipelineAPIView(ListAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+    serializer_class = EmployerApplicantListSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = Application.objects.filter(
+            job__employer=user
+        ).select_related('candidate', 'job')
+
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        search_param = self.request.query_params.get('search')
+        if search_param:
+            queryset = queryset.filter(
+                Q(candidate__name__icontains=search_param) |
+                Q(candidate__email__icontains=search_param) |
+                Q(job__title__icontains=search_param)
+            )
+
+        return queryset
+
+
+# 3. Employer Analytics & Metrics API
+class EmployerDashboardAnalyticsAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+
+    def get(self, request):
+        user = request.user
+        
+        # Removed non-existent 'is_deleted' filter
+        employer_jobs = Job.objects.filter(employer=user)
+        total_jobs = employer_jobs.count()
+        active_jobs = employer_jobs.filter(status='active').count()
+
+        employer_apps = Application.objects.filter(job__employer=user)
+        total_apps = employer_apps.count()
+
+        # ATS Status Breakdown
+        status_counts = employer_apps.values('status').annotate(count=Count('status'))
+        status_dict = {item['status']: item['count'] for item in status_counts}
+
+        # Shortlist Ratio Calculation
+        shortlisted_count = status_dict.get('shortlisted', 0) + status_dict.get('hired', 0)
+        shortlist_ratio = round((shortlisted_count / total_apps * 100), 2) if total_apps > 0 else 0.0
+
+        analytics_data = {
+            "total_jobs_posted": total_jobs,
+            "active_jobs_count": active_jobs,
+            "total_applications_received": total_apps,
+            "shortlist_ratio": shortlist_ratio,
+            "applications_by_status": status_dict
+        }
+
+        serializer = EmployerDashboardAnalyticsSerializer(analytics_data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
