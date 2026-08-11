@@ -1,44 +1,84 @@
 from django.urls import path
-from rest_framework_simplejwt.views import TokenRefreshView
-from .views import *
+from .views import (
+    # Auth Views
+    SignupAPIView,
+    LoginAPIView,
+    LogoutAPIView,
+    
+    # Profile & Resume Views
+    CandidateProfileAPIView,
+    EmployerProfileAPIView,
+    CandidateDetailListView,
+    EmployerDetailListView,
+    ResumeUploadAPIView,
+    
+    # Job Listing Views
+    JobListAPIView,
+    PublicJobListAPIView,
+    
+    # Employer Dashboard & Pipeline Views
+    EmployerJobCreateAPIView,
+    EmployerJobDetailAPIView,
+    EmployerMyJobsAPIView,
+    EmployerCandidatePipelineAPIView,
+    EmployerDashboardAnalyticsAPIView,
+    ApplicationStatusUpdateAPIView,
+    
+    # Candidate Dashboard & Application Views (Day 21)
+    ApplicationCreateAPIView,
+    ApplyJobAPIView,
+    CandidateApplicationListAPIView,
+    CandidateAppliedJobsAPIView,
+    CandidateApplicationDetailAPIView,
+    CandidateRecommendedJobsAPIView,
+    
+    # Admin Control Panel Views (Day 22)
+    AdminUserListAPIView,
+    AdminVerifyEmployerAPIView,
+    AdminSystemStatsAPIView,
+    AdminToggleUserStatusAPIView,
+    AdminModerateJobAPIView,
+    AdminAuditLogListAPIView
+)
 
 urlpatterns = [
-    # Auth Endpoints
+    # Auth Routes
     path('auth/signup/', SignupAPIView.as_view(), name='signup'),
     path('auth/login/', LoginAPIView.as_view(), name='login'),
     path('auth/logout/', LogoutAPIView.as_view(), name='logout'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
-    # Profile Endpoints
+    # Profile & Resume Management Routes
     path('profile/candidate/', CandidateProfileAPIView.as_view(), name='candidate-profile'),
-    path('profile/candidate/resume/', ResumeUploadAPIView.as_view(), name='resume-upload'),
     path('profile/employer/', EmployerProfileAPIView.as_view(), name='employer-profile'),
+    path('profiles/candidates/', CandidateDetailListView.as_view(), name='candidate-list'),
+    path('profiles/employers/', EmployerDetailListView.as_view(), name='employer-list'),
+    path('candidate/resume/upload/', ResumeUploadAPIView.as_view(), name='resume-upload'),
 
-    # Public Job Discovery & Search (Day 17)
-    path('jobs/', PublicJobListAPIView.as_view(), name='public-job-list'),
+    # Jobs & Search Routes
+    path('jobs/', JobListAPIView.as_view(), name='job-list'),
+    path('jobs/public/', PublicJobListAPIView.as_view(), name='public-job-list'),
 
-    # Employer Job Management
+    # Employer Management & Pipeline Routes
     path('employer/jobs/create/', EmployerJobCreateAPIView.as_view(), name='employer-job-create'),
     path('employer/jobs/<int:pk>/', EmployerJobDetailAPIView.as_view(), name='employer-job-detail'),
-
-    # Application & Admin Endpoints
-    path('applications/create/', ApplicationCreateAPIView.as_view(), name='application-create'),
-    path('admin/users/', AdminUserListAPIView.as_view(), name='admin-users'),
-    path('admin/employers/<int:employer_id>/verify/', AdminVerifyEmployerAPIView.as_view(), name='admin-verify-employer'),
-
-    path('applications/apply/', ApplyJobAPIView.as_view(), name='apply-job'),
-    path('applications/history/', CandidateApplicationListAPIView.as_view(), name='application-history'),
-
-    path('employer/applications/<int:pk>/status/', ApplicationStatusUpdateAPIView.as_view(), name='employer-application-status-update'),
-
-
     path('employer/dashboard/my-jobs/', EmployerMyJobsAPIView.as_view(), name='employer-my-jobs'),
-    path('employer/dashboard/applicants/', EmployerCandidatePipelineAPIView.as_view(), name='employer-applicants'),
+    path('employer/dashboard/pipeline/', EmployerCandidatePipelineAPIView.as_view(), name='employer-pipeline'),
     path('employer/dashboard/analytics/', EmployerDashboardAnalyticsAPIView.as_view(), name='employer-analytics'),
+    path('applications/<int:pk>/status/', ApplicationStatusUpdateAPIView.as_view(), name='application-status-update'),
 
-    # Day 21 Candidate Dashboard Routes
+    # Candidate Application & Dashboard Routes (Day 21)
+    path('applications/create/', ApplicationCreateAPIView.as_view(), name='application-create'),
+    path('jobs/apply/', ApplyJobAPIView.as_view(), name='apply-job'),
+    path('candidate/applications/', CandidateApplicationListAPIView.as_view(), name='candidate-applications'),
     path('candidate/dashboard/applied-jobs/', CandidateAppliedJobsAPIView.as_view(), name='candidate-applied-jobs'),
     path('candidate/dashboard/applications/<int:pk>/', CandidateApplicationDetailAPIView.as_view(), name='candidate-application-detail'),
     path('candidate/dashboard/recommendations/', CandidateRecommendedJobsAPIView.as_view(), name='candidate-recommendations'),
 
+    # Admin Control Panel Routes (Day 22)
+    path('admin/users/', AdminUserListAPIView.as_view(), name='admin-user-list'),
+    path('admin/employer/<int:employer_id>/verify/', AdminVerifyEmployerAPIView.as_view(), name='admin-verify-employer'),
+    path('admin/stats/', AdminSystemStatsAPIView.as_view(), name='admin-stats'),
+    path('admin/users/<int:pk>/toggle-status/', AdminToggleUserStatusAPIView.as_view(), name='admin-toggle-user'),
+    path('admin/jobs/<int:pk>/moderate/', AdminModerateJobAPIView.as_view(), name='admin-moderate-job'),
+    path('admin/audit-logs/', AdminAuditLogListAPIView.as_view(), name='admin-audit-logs'),
 ]

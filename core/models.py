@@ -5,6 +5,35 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
 
+class AuditLog(models.Model):
+    admin = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='admin_actions'
+    )
+    action = models.CharField(max_length=255)
+    target_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='audit_targets'
+    )
+    target_job = models.ForeignKey(
+        'Job', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='audit_jobs'
+    )
+    details = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.admin.email} - {self.action} at {self.created_at}"
+
+    def __str__(self):
+        return f"{self.admin.email} - {self.action} at {self.created_at}"
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):

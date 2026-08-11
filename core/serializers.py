@@ -1,6 +1,6 @@
 import os
 
-from .models import Candidate
+from .models import AuditLog, Candidate
 
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
@@ -206,3 +206,32 @@ class RecommendedJobSerializer(serializers.ModelSerializer):
             'id', 'title', 'company', 'location', 
             'job_type', 'skills_required', 'status', 'employer_email'
         ]
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    admin_email = serializers.CharField(source='admin.email', read_only=True)
+
+    class Meta:
+        model = AuditLog
+        fields = ['id', 'admin_email', 'action', 'details', 'created_at']
+
+
+class AdminUserManagementSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'email', 'name', 'role', 'is_active', 'is_staff', 'created_at']
+
+
+class AdminJobModerationSerializer(serializers.ModelSerializer):
+    employer_email = serializers.CharField(source='employer.email', read_only=True)
+
+    class Meta:
+        model = Job
+        fields = ['id', 'title', 'company', 'status', 'employer_email', 'created_at']
+
+
+class AuditLogSerializer(serializers.ModelSerializer):
+    admin_email = serializers.CharField(source='admin.email', read_only=True)
+
+    class Meta:
+        model = AuditLog
+        fields = ['id', 'admin_email', 'action', 'details', 'created_at']
