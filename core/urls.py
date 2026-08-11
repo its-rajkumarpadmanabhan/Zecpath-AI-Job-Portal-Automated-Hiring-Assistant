@@ -36,4 +36,9 @@ urlpatterns = [
     path('employer/dashboard/applicants/', EmployerCandidatePipelineAPIView.as_view(), name='employer-applicants'),
     path('employer/dashboard/analytics/', EmployerDashboardAnalyticsAPIView.as_view(), name='employer-analytics'),
 
+    # Day 21 Candidate Dashboard Routes
+    path('candidate/dashboard/applied-jobs/', CandidateAppliedJobsAPIView.as_view(), name='candidate-applied-jobs'),
+    path('candidate/dashboard/applications/<int:pk>/', CandidateApplicationDetailAPIView.as_view(), name='candidate-application-detail'),
+    path('candidate/dashboard/recommendations/', CandidateRecommendedJobsAPIView.as_view(), name='candidate-recommendations'),
+
 ]

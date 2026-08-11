@@ -179,3 +179,30 @@ class EmployerApplicantListSerializer(serializers.ModelSerializer):
             'id', 'candidate_id', 'candidate_name', 'candidate_email', 
             'job', 'job_title', 'status', 'applied_at', 'resume_snapshot'
         ]
+
+from rest_framework import serializers
+from .models import Application, Job
+
+class CandidateApplicationTrackerSerializer(serializers.ModelSerializer):
+    job_title = serializers.CharField(source='job.title', read_only=True)
+    company_name = serializers.CharField(source='job.company', read_only=True)
+    location = serializers.CharField(source='job.location', read_only=True)
+    job_type = serializers.CharField(source='job.job_type', read_only=True)
+
+    class Meta:
+        model = Application
+        fields = [
+            'id', 'job', 'job_title', 'company_name', 
+            'location', 'job_type', 'status', 'applied_at'
+        ]
+
+
+class RecommendedJobSerializer(serializers.ModelSerializer):
+    employer_email = serializers.CharField(source='employer.email', read_only=True)
+
+    class Meta:
+        model = Job
+        fields = [
+            'id', 'title', 'company', 'location', 
+            'job_type', 'skills_required', 'status', 'employer_email'
+        ]

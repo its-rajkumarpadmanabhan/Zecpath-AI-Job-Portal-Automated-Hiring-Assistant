@@ -35,7 +35,7 @@ from .models import Job, Application
 from .permissions import IsEmployer
 from .serializers import (
     JobSerializer, 
-    EmployerApplicantListSerializer, 
+    EmployerApplicantListSerializer, RecommendedJobSerializer,
     EmployerDashboardAnalyticsSerializer)
 from rest_framework import generics, filters
 from rest_framework.permissions import AllowAny
@@ -44,7 +44,84 @@ from .models import Job
 from .serializers import JobSerializer
 from core.filters import JobFilter
 
+# 1. Candidate Applied Jobs & Timeline Tracking API
+class CandidateAppliedJobsAPIView(ListAPIView):
+    """
+    Lists all jobs applied by the logged-in candidate with application status.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+    serializer_class = CandidateApplicationTrackerSerializer
 
+    def get_queryset(self):
+        return Application.objects.filter(
+            candidate=self.request.user
+        ).select_related('job').order_by('-applied_at')
+
+
+# 2. Application Status Timeline Details API
+class CandidateApplicationDetailAPIView(APIView):
+    """
+    Returns timeline details for a specific application.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def get(self, request, pk):
+        try:
+            application = Application.objects.select_related('job').get(
+                pk=pk, candidate=request.user
+            )
+        except Application.DoesNotExist:
+            return Response(
+                {"detail": "Application not found or unauthorized."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        timeline = [
+            {"stage": "applied", "label": "Application Submitted", "completed": True},
+            {"stage": "shortlisted", "label": "Under Review / Shortlisted", "completed": application.status in ['shortlisted', 'hired']},
+            {"stage": "hired", "label": "Hired", "completed": application.status == 'hired'}
+        ]
+
+        data = {
+            "application_id": application.id,
+            "job_title": application.job.title,
+            "company": application.job.company,
+            "current_status": application.status,
+            "applied_at": application.applied_at,
+            "timeline": timeline
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
+# 3. Profile-Based Job Recommendation Engine (Basic Matching)
+class CandidateRecommendedJobsAPIView(ListAPIView):
+    """
+    Recommends active jobs to candidates based on basic skill matching.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+    serializer_class = RecommendedJobSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        # Exclude jobs candidate already applied for
+        applied_job_ids = Application.objects.filter(candidate=user).values_list('job_id', flat=True)
+        
+        queryset = Job.objects.filter(status='active').exclude(id__in=applied_job_ids)
+
+        # Basic skill-matching filter if candidate profile skills exist
+        user_skills = getattr(user, 'skills', '')
+        if user_skills:
+            skill_list = [s.strip() for s in user_skills.split(',') if s.strip()]
+            query = Q()
+            for skill in skill_list:
+                query |= Q(skills_required__icontains=skill) | Q(title__icontains=skill)
+            
+            matched_qs = queryset.filter(query)
+            if matched_qs.exists():
+                return matched_qs.order_by('-created_at')
+
+        return queryset.order_by('-created_at')
 # 1. Job List API View (Paginated, Searchable & Filterable)
 class JobListAPIView(ListAPIView):
     permission_classes = [IsAuthenticated]
