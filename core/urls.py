@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     # Auth Views
+    ExtractResumeTextAPIView,
     SignupAPIView,
     LoginAPIView,
     LogoutAPIView,
@@ -81,4 +82,6 @@ urlpatterns = [
     path('admin/users/<int:pk>/toggle-status/', AdminToggleUserStatusAPIView.as_view(), name='admin-toggle-user'),
     path('admin/jobs/<int:pk>/moderate/', AdminModerateJobAPIView.as_view(), name='admin-moderate-job'),
     path('admin/audit-logs/', AdminAuditLogListAPIView.as_view(), name='admin-audit-logs'),
+
+    path('candidate/resume/extract-text/', ExtractResumeTextAPIView.as_view(), name='resume-extract-text'),
 ]

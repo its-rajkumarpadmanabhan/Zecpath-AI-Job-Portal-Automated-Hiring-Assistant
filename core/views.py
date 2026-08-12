@@ -50,6 +50,46 @@ from .serializers import (
     AdminJobModerationSerializer
 )
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from rest_framework.parsers import MultiPartParser, FormParser
+
+from .permissions import IsCandidate
+from .utils.resume_parser import parse_resume_file
+
+class ExtractResumeTextAPIView(APIView):
+    """
+    API endpoint for candidates to upload or re-parse their resume file and return cleaned text.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file_obj = request.FILES.get('resume')
+
+        # Fallback to candidate's existing saved resume if no file is uploaded in request
+        if not file_obj:
+            candidate_profile = getattr(request.user, 'candidate_profile', None)
+            if candidate_profile and candidate_profile.resume:
+                file_obj = candidate_profile.resume
+            else:
+                return Response(
+                    {"error": "No resume file provided or found in profile."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        try:
+            extracted_text = parse_resume_file(file_obj)
+            return Response({
+                "message": "Resume text successfully extracted and cleaned.",
+                "character_count": len(extracted_text),
+                "extracted_text": extracted_text
+            }, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"error": f"Failed to process file: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 # =============================================================================
 # 1. AUTHENTICATION VIEWS
 # =============================================================================
