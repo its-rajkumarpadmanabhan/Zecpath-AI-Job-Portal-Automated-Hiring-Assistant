@@ -162,7 +162,7 @@ class ApplicationAuditLog(models.Model):
     )
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    ats_score = models.FloatField(default=0.0, help_text="Calculated ATS suitability score percentage (0-100)")
+    
 
     def __str__(self):
         return f"App #{self.application_id}: {self.previous_status} -> {self.new_status}"
@@ -189,7 +189,7 @@ class Application(models.Model):
     resume_snapshot = models.FileField(upload_to='application_resumes/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
     applied_at = models.DateTimeField(auto_now_add=True)
-
+    ats_score = models.FloatField(default=0.0, help_text="Calculated ATS suitability score percentage (0-100)")
     class Meta:
         # Prevents duplicate applications for the exact same job by the same candidate
         unique_together = ('candidate', 'job')

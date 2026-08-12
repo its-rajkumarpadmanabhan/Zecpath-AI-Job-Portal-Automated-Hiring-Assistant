@@ -78,6 +78,76 @@ from .utils.resume_parser import parse_resume_file
 from .utils.resume_nlp import parse_resume_to_json
 from .utils.ats_engine import compute_ats_score
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from django.shortcuts import get_object_or_404
+
+from .models import Job, Application
+from .permissions import IsEmployer
+from .utils.automation_engine import process_batch_auto_shortlist, evaluate_and_apply_auto_action
+
+class BatchAutoShortlistAPIView(APIView):
+    """
+    Employer API: Triggers automated threshold screening for all pending job applications.
+    Accepts optional custom thresholds in request body.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+
+    def post(self, request, job_id):
+        job = get_object_or_404(Job, pk=job_id, employer=request.user)
+
+        # Parse optional custom cutoffs from recruiter payload
+        shortlist_cutoff = float(request.data.get('shortlist_threshold', 70.0))
+        reject_cutoff = float(request.data.get('reject_threshold', 40.0))
+
+        summary = process_batch_auto_shortlist(
+            job, 
+            shortlist_threshold=shortlist_cutoff, 
+            reject_threshold=reject_cutoff
+        )
+
+        return Response({
+            "message": f"Automation screening completed for Job ID {job.id}.",
+            "job_title": job.title,
+            "thresholds_applied": {
+                "shortlist_threshold": f"{shortlist_cutoff}%",
+                "reject_threshold": f"{reject_cutoff}%"
+            },
+            "summary": summary
+        }, status=status.HTTP_200_OK)
+
+
+class ManualOverrideStatusAPIView(APIView):
+    """
+    Employer API: Allows recruiters to manually override automated application statuses.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+
+    def patch(self, request, application_id):
+        application = get_object_or_404(Application, pk=application_id, job__employer=request.user)
+
+        new_status = request.data.get('status')
+        valid_statuses = ['applied', 'shortlisted', 'rejected']
+
+        if not new_status or new_status.lower() not in valid_statuses:
+            return Response(
+                {"error": f"Invalid status provided. Choose from: {valid_statuses}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        previous_status = application.status
+        application.status = new_status.lower()
+        application.save()
+
+        return Response({
+            "message": "Application status successfully updated by recruiter override.",
+            "application_id": application.id,
+            "candidate_email": application.candidate.email,
+            "previous_status": previous_status,
+            "new_status": application.status,
+            "ats_score": f"{application.ats_score}%"
+        }, status=status.HTTP_200_OK)
 
 class JobMatchScoreAPIView(APIView):
     """

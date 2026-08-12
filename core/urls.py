@@ -4,6 +4,7 @@ from .views import (
     EmployerRankedCandidatesAPIView,
     ExtractResumeTextAPIView,
     JobMatchScoreAPIView,
+    ManualOverrideStatusAPIView,
     ParseStructuredResumeAPIView,
     SignupAPIView,
     LoginAPIView,
@@ -42,7 +43,8 @@ from .views import (
     AdminSystemStatsAPIView,
     AdminToggleUserStatusAPIView,
     AdminModerateJobAPIView,
-    AdminAuditLogListAPIView
+    AdminAuditLogListAPIView,
+    BatchAutoShortlistAPIView
 )
 
 urlpatterns = [
@@ -96,4 +98,9 @@ urlpatterns = [
     path('jobs/<int:job_id>/match-score/', JobMatchScoreAPIView.as_view(), name='job-match-score'),
     path('employer/jobs/<int:job_id>/ranked-candidates/', EmployerRankedCandidatesAPIView.as_view(), name='employer-ranked-candidates'),
 
+
+
+    # Day 26 Automation & Workflow Routes
+    path('employer/jobs/<int:job_id>/auto-screen/', BatchAutoShortlistAPIView.as_view(), name='employer-auto-screen'),
+    path('employer/applications/<int:application_id>/override-status/', ManualOverrideStatusAPIView.as_view(), name='employer-override-status'),
 ]
