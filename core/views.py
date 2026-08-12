@@ -58,6 +58,61 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from .permissions import IsCandidate
 from .utils.resume_parser import parse_resume_file
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from rest_framework.parsers import MultiPartParser, FormParser
+
+from .permissions import IsCandidate
+from .utils.resume_parser import parse_resume_file
+from .utils.resume_nlp import parse_resume_to_json
+
+class ParseStructuredResumeAPIView(APIView):
+    """
+    API endpoint that accepts a resume file (or uses existing profile resume),
+    extracts raw text, parses skills/experience, and returns structured JSON schema.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request):
+        file_obj = request.FILES.get('resume')
+
+        if not file_obj:
+            candidate_profile = getattr(request.user, 'candidate_profile', None)
+            if candidate_profile and candidate_profile.resume:
+                file_obj = candidate_profile.resume
+            else:
+                return Response(
+                    {"error": "No resume file provided or found in profile."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        try:
+            # 1. Extract and clean raw text using Day 23 engine
+            cleaned_text = parse_resume_file(file_obj)
+
+            # 2. Extract structured NLP metrics using Day 24 engine
+            structured_data = parse_resume_to_json(cleaned_text)
+
+            # 3. Optional: Sync extracted skills string back to Candidate Profile
+            if hasattr(request.user, 'candidate_profile') and structured_data["extracted_skills"]["skills_list"]:
+                skills_str = ", ".join(structured_data["extracted_skills"]["skills_list"])
+                profile = request.user.candidate_profile
+                profile.skills = skills_str
+                profile.save()
+
+            return Response({
+                "message": "Resume successfully structured into JSON schema.",
+                "data": structured_data
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to parse structured resume: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
 class ExtractResumeTextAPIView(APIView):
     """
     API endpoint for candidates to upload or re-parse their resume file and return cleaned text.

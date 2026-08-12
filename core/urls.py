@@ -2,6 +2,7 @@ from django.urls import path
 from .views import (
     # Auth Views
     ExtractResumeTextAPIView,
+    ParseStructuredResumeAPIView,
     SignupAPIView,
     LoginAPIView,
     LogoutAPIView,
@@ -83,5 +84,9 @@ urlpatterns = [
     path('admin/jobs/<int:pk>/moderate/', AdminModerateJobAPIView.as_view(), name='admin-moderate-job'),
     path('admin/audit-logs/', AdminAuditLogListAPIView.as_view(), name='admin-audit-logs'),
 
+    # Day 23    
     path('candidate/resume/extract-text/', ExtractResumeTextAPIView.as_view(), name='resume-extract-text'),
+
+    # Day 24 Structured Resume Parsing Route
+    path('candidate/resume/parse-structured/', ParseStructuredResumeAPIView.as_view(), name='resume-parse-structured'),
 ]
