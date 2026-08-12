@@ -1,7 +1,9 @@
 from django.urls import path
 from .views import (
     # Auth Views
+    EmployerRankedCandidatesAPIView,
     ExtractResumeTextAPIView,
+    JobMatchScoreAPIView,
     ParseStructuredResumeAPIView,
     SignupAPIView,
     LoginAPIView,
@@ -89,4 +91,9 @@ urlpatterns = [
 
     # Day 24 Structured Resume Parsing Route
     path('candidate/resume/parse-structured/', ParseStructuredResumeAPIView.as_view(), name='resume-parse-structured'),
+
+    # Day 25 ATS Matching & Ranking Routes
+    path('jobs/<int:job_id>/match-score/', JobMatchScoreAPIView.as_view(), name='job-match-score'),
+    path('employer/jobs/<int:job_id>/ranked-candidates/', EmployerRankedCandidatesAPIView.as_view(), name='employer-ranked-candidates'),
+
 ]

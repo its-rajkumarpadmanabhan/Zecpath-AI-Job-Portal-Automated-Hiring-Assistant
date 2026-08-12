@@ -67,6 +67,93 @@ from .permissions import IsCandidate
 from .utils.resume_parser import parse_resume_file
 from .utils.resume_nlp import parse_resume_to_json
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from django.shortcuts import get_object_or_404
+
+from .models import Job, Application
+from .permissions import IsCandidate, IsEmployer
+from .utils.resume_parser import parse_resume_file
+from .utils.resume_nlp import parse_resume_to_json
+from .utils.ats_engine import compute_ats_score
+
+
+class JobMatchScoreAPIView(APIView):
+    """
+    Candidate API: Evaluates logged-in candidate's resume against a target job posting,
+    stores calculated ATS score, and returns suitability % score.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def post(self, request, job_id):
+        job = get_object_or_404(Job, pk=job_id)
+        candidate = request.user
+
+        # Fetch resume from candidate profile
+        if not hasattr(candidate, 'candidate_profile') or not candidate.candidate_profile.resume:
+            return Response(
+                {"error": "Please upload a resume to your candidate profile before calculating match score."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            resume_file = candidate.candidate_profile.resume
+            cleaned_text = parse_resume_file(resume_file)
+            parsed_data = parse_resume_to_json(cleaned_text)
+
+            ats_result = compute_ats_score(job, parsed_data)
+            score = ats_result["suitability_score"]
+
+            # Save or update ATS score on application if exists
+            application = Application.objects.filter(candidate=candidate, job=job).first()
+            if application:
+                application.ats_score = score
+                application.save()
+
+            return Response({
+                "message": "ATS Match evaluation complete.",
+                "job_title": job.title,
+                "company": job.company,
+                "suitability_percentage": f"{score}%",
+                "detailed_metrics": ats_result
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": f"ATS calculation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class EmployerRankedCandidatesAPIView(APIView):
+    """
+    Employer API: Returns ranked list of candidate applications sorted in descending order
+    by ATS suitability score for a specific job post.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+
+    def get(self, request, job_id):
+        job = get_object_or_404(Job, pk=job_id, employer=request.user)
+
+        applications = Application.objects.filter(job=job).select_related('candidate').order_by('-ats_score')
+
+        ranked_results = []
+        for rank, app in enumerate(applications, start=1):
+            ranked_results.append({
+                "rank": rank,
+                "application_id": app.id,
+                "candidate_name": app.candidate.name,
+                "candidate_email": app.candidate.email,
+                "ats_suitability_score": f"{app.ats_score}%",
+                "status": app.status,
+                "applied_at": app.applied_at
+            })
+
+        return Response({
+            "job_id": job.id,
+            "job_title": job.title,
+            "total_applicants": len(ranked_results),
+            "ranked_candidates": ranked_results
+        }, status=status.HTTP_200_OK)
+    
 class ParseStructuredResumeAPIView(APIView):
     """
     API endpoint that accepts a resume file (or uses existing profile resume),

@@ -162,6 +162,7 @@ class ApplicationAuditLog(models.Model):
     )
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    ats_score = models.FloatField(default=0.0, help_text="Calculated ATS suitability score percentage (0-100)")
 
     def __str__(self):
         return f"App #{self.application_id}: {self.previous_status} -> {self.new_status}"
