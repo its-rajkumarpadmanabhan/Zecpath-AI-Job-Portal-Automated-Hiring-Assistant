@@ -129,7 +129,7 @@ class Job(models.Model):
         on_delete=models.CASCADE, 
         related_name='jobs'
     )
-    title = models.CharField(max_length=255)
+    title = models.CharField(max_length=255, db_index=True)  # Indexed for search queries
     company = models.CharField(max_length=255)
     description = models.TextField()
     skills_required = models.TextField(help_text="Comma-separated skills (e.g. Python, Django, DRF)")
@@ -138,10 +138,17 @@ class Job(models.Model):
     salary_max = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     location = models.CharField(max_length=255, default='Remote')
     job_type = models.CharField(max_length=20, choices=JOB_TYPES, default='full_time')
-    status = models.CharField(max_length=20, choices=JOB_STATUS, default='active')
+    status = models.CharField(max_length=20, choices=JOB_STATUS, default='active', db_index=True) # Indexed for active filtering
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            # Composite index for filtering active public jobs sorted by creation date
+            models.Index(fields=['status', '-created_at']),
+        ]
 
     def __str__(self):
         return f"{self.title} at {self.company}"
@@ -187,13 +194,17 @@ class Application(models.Model):
         related_name='applications'
     )
     resume_snapshot = models.FileField(upload_to='application_resumes/', null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied', db_index=True) # Indexed for status queries
     applied_at = models.DateTimeField(auto_now_add=True)
-    ats_score = models.FloatField(default=0.0, help_text="Calculated ATS suitability score percentage (0-100)")
+    ats_score = models.FloatField(default=0.0, db_index=True, help_text="Calculated ATS suitability score percentage (0-100)")
+
     class Meta:
-        # Prevents duplicate applications for the exact same job by the same candidate
         unique_together = ('candidate', 'job')
         ordering = ['-applied_at']
+        indexes = [
+            # Composite index for fast recruiter queries ordering applicants by rank/score
+            models.Index(fields=['job', '-ats_score']),
+        ]
 
     def __str__(self):
         return f"{self.candidate.email} - {self.job.title}"
