@@ -181,3 +181,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ),
 }
+
+# Email Backend Configuration (Console Output for local testing)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'Zecpath Automated Assistant <no-reply@zecpath.com>'

@@ -1,3 +1,4 @@
+from email.mime import application
 import os
 from django.db.models import Count, Q
 from django.contrib.auth import authenticate
@@ -87,6 +88,8 @@ from .models import Job, Application
 from .permissions import IsEmployer
 from .utils.automation_engine import process_batch_auto_shortlist, evaluate_and_apply_auto_action
 
+from .utils.notification_service import trigger_application_status_notification
+
 class BatchAutoShortlistAPIView(APIView):
     """
     Employer API: Triggers automated threshold screening for all pending job applications.
@@ -139,6 +142,9 @@ class ManualOverrideStatusAPIView(APIView):
         previous_status = application.status
         application.status = new_status.lower()
         application.save()
+
+        # Trigger async event notification
+        trigger_application_status_notification(application)
 
         return Response({
             "message": "Application status successfully updated by recruiter override.",

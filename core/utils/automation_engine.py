@@ -1,4 +1,5 @@
 from core.models import Application
+from .notification_service import trigger_application_status_notification
 
 # Default Threshold Cutoffs (Percentages)
 DEFAULT_SHORTLIST_THRESHOLD = 70.0
@@ -7,8 +8,8 @@ DEFAULT_REJECT_THRESHOLD = 40.0
 
 def evaluate_and_apply_auto_action(application, shortlist_threshold=DEFAULT_SHORTLIST_THRESHOLD, reject_threshold=DEFAULT_REJECT_THRESHOLD):
     """
-    Evaluates an application's ATS score against cutoffs and automatically updates its status.
-    Returns tuple: (previous_status, new_status, action_taken)
+    Evaluates an application's ATS score against cutoffs, automatically updates its status,
+    and fires event-based email notifications on status change.
     """
     prev_status = application.status
     score = application.ats_score
@@ -28,8 +29,10 @@ def evaluate_and_apply_auto_action(application, shortlist_threshold=DEFAULT_SHOR
     else:
         action_taken = "retained_for_manual_review"
 
+    # Save and trigger notification if status changed
     if prev_status != application.status:
         application.save()
+        trigger_application_status_notification(application)
 
     return prev_status, application.status, action_taken
 
