@@ -93,7 +93,7 @@ from .utils.notification_service import trigger_application_status_notification
 class BatchAutoShortlistAPIView(APIView):
     """
     Employer API: Triggers automated threshold screening for all pending job applications.
-    Accepts optional custom thresholds in request body.
+    Recalculates match scores from profile/resume if not already scored.
     """
     permission_classes = [permissions.IsAuthenticated, IsEmployer]
 
@@ -103,6 +103,26 @@ class BatchAutoShortlistAPIView(APIView):
         # Parse optional custom cutoffs from recruiter payload
         shortlist_cutoff = float(request.data.get('shortlist_threshold', 70.0))
         reject_cutoff = float(request.data.get('reject_threshold', 40.0))
+
+        # Re-score any pending applications that currently have a 0.0 score
+        pending_apps = Application.objects.filter(job=job)
+        for app in pending_apps:
+            if app.ats_score == 0.0:
+                candidate_profile = getattr(app.candidate, 'candidate_profile', None)
+                candidate_skills = candidate_profile.skills if candidate_profile else ""
+                
+                # Check resume file or fallback to profile skills
+                if app.resume_snapshot:
+                    try:
+                        cleaned_text = parse_resume_file(app.resume_snapshot)
+                        parsed_data = parse_resume_to_json(cleaned_text)
+                        ats_result = compute_ats_score(job, parsed_data)
+                        app.ats_score = float(ats_result.get("suitability_score", 0.0))
+                    except Exception:
+                        app.ats_score = self._fallback_score(job.skills_required, candidate_skills)
+                else:
+                    app.ats_score = self._fallback_score(job.skills_required, candidate_skills)
+                app.save()
 
         summary = process_batch_auto_shortlist(
             job, 
@@ -120,6 +140,15 @@ class BatchAutoShortlistAPIView(APIView):
             "summary": summary
         }, status=status.HTTP_200_OK)
 
+    def _fallback_score(self, job_skills_str, candidate_skills_str):
+        if not job_skills_str or not candidate_skills_str:
+            return 0.0
+        job_skills = {s.strip().lower() for s in job_skills_str.split(',') if s.strip()}
+        cand_skills = {s.strip().lower() for s in candidate_skills_str.split(',') if s.strip()}
+        if not job_skills:
+            return 0.0
+        matched = job_skills.intersection(cand_skills)
+        return round((len(matched) / len(job_skills)) * 100.0, 1)
 
 class ManualOverrideStatusAPIView(APIView):
     """
@@ -611,11 +640,48 @@ class ApplyJobAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user
+        job = serializer.validated_data.get('job')
+        
         resume = None
-        if hasattr(user, 'candidate_profile') and user.candidate_profile.resume:
-            resume = user.candidate_profile.resume
+        ats_score_val = 0.0
+        
+        # 1. Fetch Candidate Profile & Skills
+        candidate_profile = getattr(user, 'candidate_profile', None)
+        candidate_skills = candidate_profile.skills if candidate_profile else ""
+        
+        # 2. Check for Resume file
+        if candidate_profile and candidate_profile.resume:
+            resume = candidate_profile.resume
+            try:
+                # Use Day 23/24 Parser + Day 25 ATS Engine
+                cleaned_text = parse_resume_file(resume)
+                parsed_data = parse_resume_to_json(cleaned_text)
+                ats_result = compute_ats_score(job, parsed_data)
+                ats_score_val = float(ats_result.get("suitability_score", 0.0))
+            except Exception:
+                # Fallback to Profile Skills matching if file parsing fails
+                ats_score_val = self._compute_profile_skills_score(job.skills_required, candidate_skills)
+        else:
+            # Match directly on candidate skills string
+            ats_score_val = self._compute_profile_skills_score(job.skills_required, candidate_skills)
 
-        serializer.save(candidate=user, resume_snapshot=resume)
+        # 3. Persist application with the calculated ATS score
+        serializer.save(candidate=user, resume_snapshot=resume, ats_score=ats_score_val)
+
+    def _compute_profile_skills_score(self, job_skills_str, candidate_skills_str):
+        if not job_skills_str or not candidate_skills_str:
+            return 0.0
+        job_skills = {s.strip().lower() for s in job_skills_str.split(',') if s.strip()}
+        cand_skills = {s.strip().lower() for s in candidate_skills_str.split(',') if s.strip()}
+        if not job_skills:
+            return 0.0
+        matched = job_skills.intersection(cand_skills)
+        return round((len(matched) / len(job_skills)) * 100.0, 1)
+
+
+class ApplicationCreateAPIView(ApplyJobAPIView):
+    """Alias for ApplyJobAPIView ensuring identical functionality."""
+    pass
 
 
 class CandidateApplicationListAPIView(generics.ListAPIView):
