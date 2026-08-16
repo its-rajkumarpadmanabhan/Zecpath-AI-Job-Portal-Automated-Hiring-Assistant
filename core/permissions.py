@@ -19,9 +19,14 @@ class IsAdminUserRole(BasePermission):
         )
 
 class IsEmployer(BasePermission):
-    """Allows access only to authenticated users with the employer role."""
+    """Allows access only to authenticated users with the employer/recruiter role."""
     def has_permission(self, request, view):
-        return bool(request.user and request.user.is_authenticated and getattr(request.user, 'role', None) == 'employer')
+        return bool(
+            request.user 
+            and request.user.is_authenticated 
+            and getattr(request.user, 'role', None) in ['recruiter', 'employer']
+        )
+
 
 class IsEmployerAndOwner(BasePermission):
     """Allows access only to the employer who created the job post."""
