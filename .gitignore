@@ -4,3 +4,5 @@ db.sqlite3
 day3_env/
 *.env
 .vscode/
+media/
+
