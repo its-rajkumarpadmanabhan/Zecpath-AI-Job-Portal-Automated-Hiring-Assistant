@@ -1,12 +1,14 @@
-
+import logging
 import threading
 from django.core.mail import send_mail
 from django.conf import settings
 
+logger = logging.getLogger(__name__)
+
 def send_async_email(subject, text_message, html_message, recipient_list):
     """
-    Executes email sending inside a separate background thread 
-    to keep API response times lightning fast.
+    Fallback: Executes email sending inside a separate background thread
+    if Celery queue is not available.
     """
     def _send():
         try:
@@ -18,19 +20,27 @@ def send_async_email(subject, text_message, html_message, recipient_list):
                 html_message=html_message,
                 fail_silently=False
             )
-            print(f"✅ Notification email successfully sent to {recipient_list}")
+            logger.info(f"Notification email successfully delivered to {recipient_list}")
         except Exception as e:
-            print(f"❌ Failed to deliver email to {recipient_list}: {str(e)}")
+            logger.error(f"Failed to deliver email to {recipient_list}: {str(e)}")
 
-    # Spin up background thread
     thread = threading.Thread(target=_send)
     thread.start()
 
 
 def trigger_application_status_notification(application):
     """
-    Triggers event-based email notifications based on application status transitions.
+    Triggers event-based email notifications using Celery task queue (with fallback).
     """
+    try:
+        from core.tasks import send_async_application_status_email_task
+        # Offload task execution to Celery Worker
+        send_async_application_status_email_task.delay(application.id)
+        logger.info(f"Queued Celery email task for application #{application.id}")
+        return
+    except Exception as exc:
+        logger.warning(f"Celery queue unavailable ({exc}), falling back to direct background thread dispatch.")
+
     candidate = application.candidate
     job = application.job
     status = application.status.lower()
@@ -64,7 +74,6 @@ def trigger_application_status_notification(application):
     else:
         return
 
-    # Trigger background worker thread
     send_async_email(
         subject=subject,
         text_message=text_message,

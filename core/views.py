@@ -872,3 +872,63 @@ class ApplicationCreateAPIView(generics.CreateAPIView):
             resume = user.candidate_profile.resume
 
         serializer.save(candidate=user, resume_snapshot=resume)
+
+
+class AsyncParseResumeAPIView(APIView):
+    """
+    Candidate API: Triggers asynchronous background resume parsing & NLP extraction via Celery.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsCandidate]
+
+    def post(self, request):
+        if not hasattr(request.user, 'candidate_profile') or not request.user.candidate_profile.resume:
+            return Response(
+                {"error": "No resume uploaded. Please upload a resume before requesting async parsing."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        candidate_profile = request.user.candidate_profile
+        
+        try:
+            from core.tasks import async_parse_resume_task
+            task_result = async_parse_resume_task.delay(candidate_profile.id)
+            task_id = task_result.id
+        except Exception as e:
+            from core.tasks import async_parse_resume_task
+            task_result = async_parse_resume_task(candidate_profile.id)
+            task_id = "eager-sync-execution"
+
+        return Response({
+            "message": "Async resume parsing task dispatched to Celery worker queue.",
+            "candidate_id": candidate_profile.id,
+            "task_id": str(task_id)
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+class AsyncBatchAutoScreenAPIView(APIView):
+    """
+    Employer API: Triggers asynchronous batch ATS scoring & auto-screening via Celery workers.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+
+    def post(self, request, job_id):
+        job = get_object_or_404(Job, pk=job_id, employer=request.user)
+        pending_apps = Application.objects.filter(job=job, status='applied')
+
+        dispatched_tasks = []
+        from core.tasks import async_compute_ats_score_task
+
+        for app in pending_apps:
+            try:
+                t = async_compute_ats_score_task.delay(app.id)
+                dispatched_tasks.append({"application_id": app.id, "task_id": t.id})
+            except Exception:
+                async_compute_ats_score_task(app.id)
+                dispatched_tasks.append({"application_id": app.id, "task_id": "eager-execution"})
+
+        return Response({
+            "message": f"Dispatched async screening tasks for {len(dispatched_tasks)} pending applications.",
+            "job_id": job.id,
+            "job_title": job.title,
+            "tasks": dispatched_tasks
+        }, status=status.HTTP_202_ACCEPTED)

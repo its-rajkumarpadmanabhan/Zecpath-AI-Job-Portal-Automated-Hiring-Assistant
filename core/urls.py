@@ -44,8 +44,13 @@ from .views import (
     AdminToggleUserStatusAPIView,
     AdminModerateJobAPIView,
     AdminAuditLogListAPIView,
-    BatchAutoShortlistAPIView
+    BatchAutoShortlistAPIView,
+
+    # Day 32 Async Views
+    AsyncParseResumeAPIView,
+    AsyncBatchAutoScreenAPIView
 )
+
 
 urlpatterns = [
     # Auth Routes
@@ -103,4 +108,9 @@ urlpatterns = [
     # Day 26 Automation & Workflow Routes
     path('employer/jobs/<int:job_id>/auto-screen/', BatchAutoShortlistAPIView.as_view(), name='employer-auto-screen'),
     path('employer/applications/<int:application_id>/override-status/', ManualOverrideStatusAPIView.as_view(), name='employer-override-status'),
+
+    # Day 32 Background Jobs & Async Routes (Celery + Redis)
+    path('candidate/resume/parse-async/', AsyncParseResumeAPIView.as_view(), name='resume-parse-async'),
+    path('employer/jobs/<int:job_id>/async-auto-screen/', AsyncBatchAutoScreenAPIView.as_view(), name='employer-async-auto-screen'),
 ]
+

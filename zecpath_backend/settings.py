@@ -185,3 +185,29 @@ REST_FRAMEWORK = {
 # Email Backend Configuration (Console Output for local testing)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'Zecpath Automated Assistant <no-reply@zecpath.com>'
+
+# Celery Configuration (Redis Broker & Result Backend)
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Eager execution fallback for dev environments where Redis broker is offline
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False').lower() in ('true', '1')
+CELERY_TASK_EAGER_PROPAGATES = True
+
+# Celery Beat Periodic Tasks Schedule (Cron Jobs)
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'periodic-auto-screening-hourly': {
+        'task': 'core.tasks.periodic_batch_auto_screening_task',
+        'schedule': crontab(minute=0),  # Runs every hour at minute 0
+    },
+    'periodic-analytics-digest-daily': {
+        'task': 'core.tasks.periodic_system_analytics_digest_task',
+        'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+    },
+}
