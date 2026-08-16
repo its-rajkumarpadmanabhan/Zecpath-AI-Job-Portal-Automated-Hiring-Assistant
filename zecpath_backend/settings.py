@@ -195,8 +195,9 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
 # Eager execution fallback for dev environments where Redis broker is offline
-CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False').lower() in ('true', '1')
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'True').lower() in ('true', '1')
 CELERY_TASK_EAGER_PROPAGATES = True
+
 
 # Celery Beat Periodic Tasks Schedule (Cron Jobs)
 from celery.schedules import crontab
@@ -210,4 +211,4 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'core.tasks.periodic_system_analytics_digest_task',
         'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
     },
-}
+}
