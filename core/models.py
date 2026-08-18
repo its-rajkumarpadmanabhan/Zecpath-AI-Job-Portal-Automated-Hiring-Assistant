@@ -208,3 +208,29 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.candidate.email} - {self.job.title}"
+
+
+class AICall(models.Model):
+    STATUS_CHOICES = (
+        ('queued', 'Queued'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    application = models.OneToOneField(
+        'Application', 
+        on_delete=models.CASCADE, 
+        related_name='ai_call'
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='queued', db_index=True)
+    scheduled_at = models.DateTimeField()
+    completed_at = models.DateTimeField(null=True, blank=True)
+    retry_count = models.IntegerField(default=0)
+    error_notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"AI Call for App #{self.application_id} - {self.status}"

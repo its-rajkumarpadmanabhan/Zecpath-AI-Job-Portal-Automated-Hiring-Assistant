@@ -33,6 +33,11 @@ def evaluate_and_apply_auto_action(application, shortlist_threshold=DEFAULT_SHOR
     if prev_status != application.status:
         application.save()
         trigger_application_status_notification(application)
+        
+        # Trigger AI Screening call if auto shortlisted
+        if action_taken == "auto_shortlisted":
+            from .ai_call_engine import trigger_ai_call
+            trigger_ai_call(application)
 
     return prev_status, application.status, action_taken
 

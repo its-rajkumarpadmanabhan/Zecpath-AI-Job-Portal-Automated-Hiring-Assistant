@@ -202,3 +202,49 @@ def periodic_system_analytics_digest_task():
         "total_applications": total_applications,
         "shortlisted_applications": shortlisted_applications
     }
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+def execute_ai_call_task(self, ai_call_id):
+    """
+    Task Queue 4: AI Call Execution Task
+    Simulates making a third-party API call (e.g., Twilio, Bland AI) for the screening.
+    Handles scheduling, delays, and failure retries.
+    """
+    from core.models import AICall
+    from django.utils import timezone
+
+    try:
+        ai_call = AICall.objects.get(pk=ai_call_id)
+        
+        if ai_call.status in ['completed', 'cancelled']:
+            return {"status": "skipped", "reason": f"Call already {ai_call.status}"}
+
+        # Mark as in progress
+        ai_call.status = 'in_progress'
+        ai_call.save()
+
+        # Simulate API call delay (in a real scenario, this would be an HTTP request)
+        logger.info(f"Initiating AI call to candidate for App #{ai_call.application_id}...")
+        
+        ai_call.status = 'completed'
+        ai_call.completed_at = timezone.now()
+        ai_call.save()
+        
+        logger.info(f"AI call completed successfully for App #{ai_call.application_id}.")
+        return {"status": "success", "ai_call_id": ai_call_id}
+
+    except AICall.DoesNotExist:
+        logger.error(f"AICall #{ai_call_id} not found.")
+        return {"status": "error", "message": "AICall not found"}
+    except Exception as exc:
+        try:
+            ai_call = AICall.objects.get(pk=ai_call_id)
+            ai_call.retry_count = self.request.retries + 1
+            ai_call.error_notes = str(exc)
+            ai_call.status = 'failed' if self.request.retries >= self.max_retries else 'queued'
+            ai_call.save()
+        except:
+            pass
+        logger.error(f"Failed to execute AI call #{ai_call_id}: {exc}")
+        raise self.retry(exc=exc)
