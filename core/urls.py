@@ -48,7 +48,15 @@ from .views import (
 
     # Day 32 Async Views
     AsyncParseResumeAPIView,
-    AsyncBatchAutoScreenAPIView
+    AsyncBatchAutoScreenAPIView,
+
+    # Day 33 AI Call Views
+    AICallTriggerAPIView,
+    AICallDetailAPIView,
+    AICallListAPIView,
+    EmployerJobAICallsAPIView,
+    AICallRetryAPIView,
+    AICallCancelAPIView
 )
 
 
@@ -103,8 +111,6 @@ urlpatterns = [
     path('jobs/<int:job_id>/match-score/', JobMatchScoreAPIView.as_view(), name='job-match-score'),
     path('employer/jobs/<int:job_id>/ranked-candidates/', EmployerRankedCandidatesAPIView.as_view(), name='employer-ranked-candidates'),
 
-
-
     # Day 26 Automation & Workflow Routes
     path('employer/jobs/<int:job_id>/auto-screen/', BatchAutoShortlistAPIView.as_view(), name='employer-auto-screen'),
     path('employer/applications/<int:application_id>/override-status/', ManualOverrideStatusAPIView.as_view(), name='employer-override-status'),
@@ -112,5 +118,14 @@ urlpatterns = [
     # Day 32 Background Jobs & Async Routes (Celery + Redis)
     path('candidate/resume/parse-async/', AsyncParseResumeAPIView.as_view(), name='resume-parse-async'),
     path('employer/jobs/<int:job_id>/async-auto-screen/', AsyncBatchAutoScreenAPIView.as_view(), name='employer-async-auto-screen'),
+
+    # Day 33 AI Call Trigger & Tracking Routes
+    path('aicalls/trigger/', AICallTriggerAPIView.as_view(), name='aicall-trigger'),
+    path('aicalls/<int:pk>/', AICallDetailAPIView.as_view(), name='aicall-detail'),
+    path('aicalls/', AICallListAPIView.as_view(), name='aicall-list'),
+    path('employer/jobs/<int:job_id>/ai-calls/', EmployerJobAICallsAPIView.as_view(), name='employer-job-ai-calls'),
+    path('aicalls/<int:pk>/retry/', AICallRetryAPIView.as_view(), name='aicall-retry'),
+    path('aicalls/<int:pk>/cancel/', AICallCancelAPIView.as_view(), name='aicall-cancel'),
 ]
+
 

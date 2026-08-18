@@ -1,11 +1,7 @@
 import os
-
-from .models import AuditLog, Candidate
-
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-
-from .models import User, Job, Application, Candidate, Employer,ApplicationAuditLog
+from .models import User, Job, Application, Candidate, Employer, ApplicationAuditLog, AuditLog, AICall
 
 class CandidateProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -235,3 +231,28 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = ['id', 'admin_email', 'action', 'details', 'created_at']
+
+
+class AICallSerializer(serializers.ModelSerializer):
+    candidate_id = serializers.IntegerField(source='application.candidate.id', read_only=True)
+    candidate_name = serializers.CharField(source='application.candidate.name', read_only=True)
+    candidate_email = serializers.CharField(source='application.candidate.email', read_only=True)
+    job_id = serializers.IntegerField(source='application.job.id', read_only=True)
+    job_title = serializers.CharField(source='application.job.title', read_only=True)
+    ats_score = serializers.FloatField(source='application.ats_score', read_only=True)
+
+    class Meta:
+        model = AICall
+        fields = [
+            'id', 'application', 'candidate_id', 'candidate_name', 'candidate_email',
+            'job_id', 'job_title', 'ats_score', 'status', 'scheduled_at',
+            'completed_at', 'retry_count', 'error_notes', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'application', 'completed_at', 'created_at', 'updated_at']
+
+
+class AICallTriggerSerializer(serializers.Serializer):
+    application_id = serializers.IntegerField(required=True)
+    delay_minutes = serializers.IntegerField(default=5, min_value=0)
+    ats_threshold = serializers.FloatField(default=75.0, min_value=0.0, max_value=100.0)
+    force = serializers.BooleanField(default=False)
