@@ -117,7 +117,8 @@ urlpatterns = [
 # Quick endpoints for Postman testing
 from rest_framework import viewsets
 from .models import AICall, AIInterviewSession, CallLog
-from .serializers import AICallSerializer, AIInterviewSessionSerializer, CallLogSerializer
+from .serializers import AICallSerializer, AIInterviewSessionSerializer, CallLogSerializer, AIQuestionSerializer, AIAnswerSerializer
+from .models import AIQuestion, AIAnswer
 from rest_framework.routers import DefaultRouter
 
 class AICallViewSet(viewsets.ModelViewSet):
@@ -128,6 +129,14 @@ class AIInterviewSessionViewSet(viewsets.ModelViewSet):
     queryset = AIInterviewSession.objects.all()
     serializer_class = AIInterviewSessionSerializer
 
+class AIQuestionViewSet(viewsets.ModelViewSet):
+    queryset = AIQuestion.objects.all()
+    serializer_class = AIQuestionSerializer
+
+class AIAnswerViewSet(viewsets.ModelViewSet):
+    queryset = AIAnswer.objects.all()
+    serializer_class = AIAnswerSerializer
+
 class CallLogViewSet(viewsets.ModelViewSet):
     queryset = CallLog.objects.all()
     serializer_class = CallLogSerializer
@@ -135,6 +144,8 @@ class CallLogViewSet(viewsets.ModelViewSet):
 router = DefaultRouter()
 router.register(r'testing/ai-calls', AICallViewSet, basename='test-aicalls')
 router.register(r'testing/ai-sessions', AIInterviewSessionViewSet, basename='test-aisessions')
+router.register(r'testing/ai-questions', AIQuestionViewSet, basename='test-aiquestions')
+router.register(r'testing/ai-answers', AIAnswerViewSet, basename='test-aianswers')
 router.register(r'testing/call-logs', CallLogViewSet, basename='test-calllogs')
 
 urlpatterns += router.urls

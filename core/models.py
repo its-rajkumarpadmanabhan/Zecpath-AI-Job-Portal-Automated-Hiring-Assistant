@@ -237,68 +237,119 @@ class AICall(models.Model):
 
 
 class AIInterviewSession(models.Model):
-    ai_call = models.OneToOneField(
-        'AICall', 
-        on_delete=models.CASCADE, 
-        related_name='interview_session'
+    SESSION_STATUS_CHOICES = (
+        ('initiated', 'Initiated'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('abandoned', 'Abandoned'),
     )
-    transcript_data = models.JSONField(blank=True, null=True, help_text="Structured JSON of the full transcript")
-    summary = models.TextField(blank=True, null=True)
-    started_at = models.DateTimeField(null=True, blank=True)
+
+    application = models.ForeignKey(
+        'Application',
+        on_delete=models.CASCADE,
+        related_name='interview_sessions'
+    )
+    session_status = models.CharField(
+        max_length=20, 
+        choices=SESSION_STATUS_CHOICES, 
+        default='initiated'
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Interview Session for Call #{self.ai_call_id}"
-
-
-class AIQuestion(models.Model):
-    session = models.ForeignKey(
-        AIInterviewSession, 
-        on_delete=models.CASCADE, 
-        related_name='questions'
-    )
-    question_text = models.TextField()
-    order = models.IntegerField(default=0)
-    asked_at = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(default=0)
+    
+    # Transcript & Scoring Output
+    transcript = models.TextField(blank=True, null=True)  # Raw full transcript
+    structured_transcript = models.JSONField(default=list, blank=True)  # Structured Q&A JSON
+    ai_score = models.FloatField(null=True, blank=True)
+    ai_feedback = models.TextField(blank=True, null=True)
 
     class Meta:
-        ordering = ['order']
+        db_table = 'ai_interview_sessions'
+        ordering = ['-started_at']
 
     def __str__(self):
-        return f"Q{self.order}: {self.question_text[:50]}"
+        return f"AI Session #{self.id} - App #{self.application_id} ({self.session_status})"
+
+
+# ------------------------------------------------------------------------------
+# 2. AI Question & Candidate Answer Breakdown
+# ------------------------------------------------------------------------------
+class AIQuestion(models.Model):
+    session = models.ForeignKey(
+        AIInterviewSession,
+        on_delete=models.CASCADE,
+        related_name='questions'
+    )
+    question_order = models.PositiveIntegerField(default=1)
+    question_text = models.TextField()
+    category = models.CharField(max_length=100, default='Technical')  # Technical, Behavioral, Situational
+    asked_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ai_interview_questions'
+        ordering = ['question_order']
+
+    def __str__(self):
+        return f"Q{self.question_order} for Session #{self.session_id}"
 
 
 class AIAnswer(models.Model):
     question = models.OneToOneField(
-        AIQuestion, 
-        on_delete=models.CASCADE, 
+        AIQuestion,
+        on_delete=models.CASCADE,
         related_name='answer'
     )
-    answer_text = models.TextField()
-    audio_url = models.URLField(blank=True, null=True, help_text="URL to the voice-to-text audio if available")
-    answered_at = models.DateTimeField(null=True, blank=True)
+    transcript_text = models.TextField()  # Voice-to-text converted output
+    confidence_score = models.FloatField(default=1.0)  # STT model confidence
+    audio_duration_seconds = models.FloatField(default=0.0)
+    sentiment = models.CharField(max_length=50, blank=True, null=True)  # Positive, Neutral, Negative
+    answered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ai_interview_answers'
 
     def __str__(self):
-        return f"Ans to Q{self.question.order}"
+        return f"Answer for Q#{self.question_id}"
 
 
+# ------------------------------------------------------------------------------
+# 3. Call Audit Logs (Compliance & Auditing)
+# ------------------------------------------------------------------------------
 class CallLog(models.Model):
-    ai_call = models.ForeignKey(
-        'AICall', 
-        on_delete=models.CASCADE, 
-        related_name='logs'
+    CALL_EVENT_CHOICES = (
+        ('triggered', 'Triggered'),
+        ('connected', 'Connected'),
+        ('transcribing', 'Transcribing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('retried', 'Retried'),
+    )
+
+    session = models.ForeignKey(
+        AIInterviewSession,
+        on_delete=models.CASCADE,
+        related_name='call_logs',
+        null=True,
+        blank=True
     )
     triggered_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        help_text="User who initiated the call (if manual), else None for automated"
+        related_name='triggered_call_logs'
     )
-    action = models.CharField(max_length=255, help_text="e.g., 'Initiated', 'Failed', 'Completed'")
-    reason = models.TextField(blank=True, null=True, help_text="Why this action was performed or why it failed")
+    event = models.CharField(max_length=30, choices=CALL_EVENT_CHOICES)
+    trigger_reason = models.CharField(max_length=255, default='Auto-Screening Criteria Met')
+    meta_data = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        db_table = 'ai_call_audit_logs'
+        ordering = ['-timestamp']
+
     def __str__(self):
-        return f"Log for Call #{self.ai_call_id} - {self.action}"
+        return f"AuditLog: {self.event} at {self.timestamp} by {self.triggered_by}"

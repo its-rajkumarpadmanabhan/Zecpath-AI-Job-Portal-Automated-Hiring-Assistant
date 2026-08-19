@@ -238,27 +238,48 @@ class AuditLogSerializer(serializers.ModelSerializer):
 
 from .models import AIInterviewSession, AIQuestion, AIAnswer, CallLog, AICall
 
-class CallLogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CallLog
-        fields = '__all__'
-
 class AIAnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = AIAnswer
         fields = '__all__'
 
+
 class AIQuestionSerializer(serializers.ModelSerializer):
     answer = AIAnswerSerializer(read_only=True)
+
     class Meta:
         model = AIQuestion
-        fields = '__all__'
+        fields = ['id', 'session', 'question_order', 'question_text', 'category', 'asked_at', 'answer']
+
+
+class CallLogSerializer(serializers.ModelSerializer):
+    triggered_by_email = serializers.CharField(source='triggered_by.email', read_only=True)
+
+    class Meta:
+        model = CallLog
+        fields = ['id', 'session', 'triggered_by', 'triggered_by_email', 'event', 'trigger_reason', 'meta_data', 'ip_address', 'timestamp']
+
 
 class AIInterviewSessionSerializer(serializers.ModelSerializer):
     questions = AIQuestionSerializer(many=True, read_only=True)
+    call_logs = CallLogSerializer(many=True, read_only=True)
+
     class Meta:
         model = AIInterviewSession
-        fields = '__all__'
+        fields = [
+            'id', 
+            'application', 
+            'session_status', 
+            'started_at', 
+            'ended_at', 
+            'duration_seconds', 
+            'transcript', 
+            'structured_transcript', 
+            'ai_score', 
+            'ai_feedback', 
+            'questions', 
+            'call_logs'
+        ]
 
 class AICallSerializer(serializers.ModelSerializer):
     interview_session = AIInterviewSessionSerializer(read_only=True)
@@ -266,3 +287,9 @@ class AICallSerializer(serializers.ModelSerializer):
     class Meta:
         model = AICall
         fields = '__all__'
+
+class AICallTriggerSerializer(serializers.Serializer):
+    application_id = serializers.IntegerField(required=True)
+    delay_minutes = serializers.IntegerField(default=5, min_value=0)
+    ats_threshold = serializers.FloatField(default=75.0, min_value=0.0, max_value=100.0)
+    force = serializers.BooleanField(default=False)

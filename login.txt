@@ -2,7 +2,7 @@
 
 Global Password for ALL accounts (Recruiters & Candidates): StrongPassword123!
 
----------------------------- RECRUITERS & THEIR JOBS ------------------------
+--- RECRUITERS & THEIR JOBS ---
 
 1. Sarah Jenkins
    Email: sarah.jenkins@acmecorp.com
@@ -30,7 +30,7 @@ Global Password for ALL accounts (Recruiters & Candidates): StrongPassword123!
     "password": "StrongPassword123!"
 }
 
--------------------------------------- CANDIDATES -----------------------------------
+--- CANDIDATES ---
 
 1. Alex Smith
    Email: alex.smith@example.com
@@ -53,7 +53,3 @@ Global Password for ALL accounts (Recruiters & Candidates): StrongPassword123!
     "email": "priya.patel@example.com",
     "password": "StrongPassword123!"
 }
-
-
-
--------------------------------------------------------------------------------------------------------------------
