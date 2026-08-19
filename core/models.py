@@ -234,3 +234,71 @@ class AICall(models.Model):
 
     def __str__(self):
         return f"AI Call for App #{self.application_id} - {self.status}"
+
+
+class AIInterviewSession(models.Model):
+    ai_call = models.OneToOneField(
+        'AICall', 
+        on_delete=models.CASCADE, 
+        related_name='interview_session'
+    )
+    transcript_data = models.JSONField(blank=True, null=True, help_text="Structured JSON of the full transcript")
+    summary = models.TextField(blank=True, null=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Interview Session for Call #{self.ai_call_id}"
+
+
+class AIQuestion(models.Model):
+    session = models.ForeignKey(
+        AIInterviewSession, 
+        on_delete=models.CASCADE, 
+        related_name='questions'
+    )
+    question_text = models.TextField()
+    order = models.IntegerField(default=0)
+    asked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['order']
+
+    def __str__(self):
+        return f"Q{self.order}: {self.question_text[:50]}"
+
+
+class AIAnswer(models.Model):
+    question = models.OneToOneField(
+        AIQuestion, 
+        on_delete=models.CASCADE, 
+        related_name='answer'
+    )
+    answer_text = models.TextField()
+    audio_url = models.URLField(blank=True, null=True, help_text="URL to the voice-to-text audio if available")
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Ans to Q{self.question.order}"
+
+
+class CallLog(models.Model):
+    ai_call = models.ForeignKey(
+        'AICall', 
+        on_delete=models.CASCADE, 
+        related_name='logs'
+    )
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        help_text="User who initiated the call (if manual), else None for automated"
+    )
+    action = models.CharField(max_length=255, help_text="e.g., 'Initiated', 'Failed', 'Completed'")
+    reason = models.TextField(blank=True, null=True, help_text="Why this action was performed or why it failed")
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Log for Call #{self.ai_call_id} - {self.action}"

@@ -235,3 +235,34 @@ class AuditLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = AuditLog
         fields = ['id', 'admin_email', 'action', 'details', 'created_at']
+
+from .models import AIInterviewSession, AIQuestion, AIAnswer, CallLog, AICall
+
+class CallLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CallLog
+        fields = '__all__'
+
+class AIAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AIAnswer
+        fields = '__all__'
+
+class AIQuestionSerializer(serializers.ModelSerializer):
+    answer = AIAnswerSerializer(read_only=True)
+    class Meta:
+        model = AIQuestion
+        fields = '__all__'
+
+class AIInterviewSessionSerializer(serializers.ModelSerializer):
+    questions = AIQuestionSerializer(many=True, read_only=True)
+    class Meta:
+        model = AIInterviewSession
+        fields = '__all__'
+
+class AICallSerializer(serializers.ModelSerializer):
+    interview_session = AIInterviewSessionSerializer(read_only=True)
+    logs = CallLogSerializer(many=True, read_only=True)
+    class Meta:
+        model = AICall
+        fields = '__all__'

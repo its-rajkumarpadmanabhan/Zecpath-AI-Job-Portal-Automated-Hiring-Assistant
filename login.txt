@@ -1,0 +1,59 @@
+=== LOGIN CREDENTIALS ===
+
+Global Password for ALL accounts (Recruiters & Candidates): StrongPassword123!
+
+---------------------------- RECRUITERS & THEIR JOBS ------------------------
+
+1. Sarah Jenkins
+   Email: sarah.jenkins@acmecorp.com
+   Company: Acme Corp
+   Jobs Posted:
+   - Senior Software Engineer (Python, Django, AWS)
+   - DevOps Engineer (Docker, Kubernetes, CI/CD)
+
+>>>>>>> http://127.0.0.1:8000/api/auth/login/
+{
+    "email": "sarah.jenkins@acmecorp.com",
+    "password": "StrongPassword123!"
+}
+
+2. Michael Chang
+   Email: m.chang@technova.io
+   Company: TechNova
+   Jobs Posted:
+   - Data Scientist (Python, Pandas, Machine Learning)
+   - Machine Learning Engineer (PyTorch, TensorFlow, Python)
+
+>>>>>>> http://127.0.0.1:8000/api/auth/login/
+{
+    "email": "m.chang@technova.io",
+    "password": "StrongPassword123!"
+}
+
+-------------------------------------- CANDIDATES -----------------------------------
+
+1. Alex Smith
+   Email: alex.smith@example.com
+   Skills: Python, Django, PostgreSQL, AWS, Docker
+   Experience: 4 years as a Backend Developer
+
+>>>>>>> http://127.0.0.1:8000/api/auth/login/
+{
+    "email": "alex.smith@example.com",
+    "password": "StrongPassword123!"
+}
+
+2. Priya Patel
+   Email: priya.patel@example.com
+   Skills: Python, PyTorch, Pandas, Machine Learning, TensorFlow
+   Experience: 3 years as a Machine Learning Engineer
+
+>>>>>>> http://127.0.0.1:8000/api/auth/login/
+{
+    "email": "priya.patel@example.com",
+    "password": "StrongPassword123!"
+}
+
+
+
+-------------------------------------------------------------------------------------------------------------------
