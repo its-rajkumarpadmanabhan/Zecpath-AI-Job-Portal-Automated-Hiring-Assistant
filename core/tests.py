@@ -153,3 +153,71 @@ class ProfileModuleTests(APITestCase):
             status.HTTP_403_FORBIDDEN, 
             status.HTTP_404_NOT_FOUND
         ])
+
+
+class AICallEngineTests(APITestCase):
+    def setUp(self):
+        self.recruiter = User.objects.create_user(
+            email="recruiter_test33@example.com",
+            password="Password123!",
+            name="Recruiter Day33",
+            role="recruiter"
+        )
+        self.candidate_user = User.objects.create_user(
+            email="candidate_test33@example.com",
+            password="Password123!",
+            name="Candidate Day33",
+            role="candidate"
+        )
+        self.candidate_profile, _ = Candidate.objects.get_or_create(user=self.candidate_user)
+
+        self.job = Job.objects.create(
+            employer=self.recruiter,
+            title="Senior Backend Engineer",
+            company="Tech Corp",
+            skills_required="Python, Django",
+            experience_required="3 years",
+            status="active"
+        )
+
+        self.app = Application.objects.create(
+            candidate=self.candidate_user,
+            job=self.job,
+            status="applied",
+            ats_score=80.0
+        )
+
+    def test_eligibility_and_trigger(self):
+        from core.utils.ai_call_engine import check_eligibility, trigger_ai_call
+        eligible, reason = check_eligibility(self.app, ats_threshold=75.0)
+        self.assertTrue(eligible)
+
+        ai_call, message = trigger_ai_call(self.app, delay_minutes=5)
+        self.assertIsNotNone(ai_call)
+        self.assertIn(ai_call.status, ['queued', 'completed'])
+
+    def test_ai_call_endpoints(self):
+        from core.utils.ai_call_engine import trigger_ai_call
+        ai_call, _ = trigger_ai_call(self.app, force=True)
+
+        self.client.force_authenticate(user=self.recruiter)
+
+        # GET detail
+        response = self.client.get(f'/api/aicalls/{ai_call.id}/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # GET list
+        response = self.client.get('/api/aicalls/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Set call status to queued to test cancel
+        ai_call.status = 'queued'
+        ai_call.save()
+
+        # POST cancel
+        response = self.client.post(f'/api/aicalls/{ai_call.id}/cancel/', {"reason": "Test cancel"}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # POST retry
+        response = self.client.post(f'/api/aicalls/{ai_call.id}/retry/', {"delay_minutes": 5}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -16,7 +16,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Models
-from .models import Job, User, Employer, Candidate, Application, AuditLog
+from .models import Job, User, Employer, Candidate, Application, AuditLog, AICall
 
 # Custom Permissions
 from .permissions import (
@@ -48,7 +48,9 @@ from .serializers import (
     RecommendedJobSerializer,
     AuditLogSerializer,
     AdminUserManagementSerializer,
-    AdminJobModerationSerializer
+    AdminJobModerationSerializer,
+    AICallSerializer,
+    AICallTriggerSerializer
 )
 
 from rest_framework.views import APIView
@@ -931,4 +933,172 @@ class AsyncBatchAutoScreenAPIView(APIView):
             "job_id": job.id,
             "job_title": job.title,
             "tasks": dispatched_tasks
-        }, status=status.HTTP_202_ACCEPTED)
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+# =============================================================================
+# 7. AI CALL TRIGGER & ELIGIBILITY ENGINE VIEWS (DAY 33)
+# =============================================================================
+
+class AICallTriggerAPIView(APIView):
+    """
+    Employer / Admin API: Triggers or schedules an AI screening call for an application
+    after running business eligibility checks (ATS threshold, job status, candidate availability).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = AICallTriggerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        app_id = serializer.validated_data['application_id']
+        delay_minutes = serializer.validated_data['delay_minutes']
+        ats_threshold = serializer.validated_data['ats_threshold']
+        force = serializer.validated_data['force']
+
+        application = get_object_or_404(Application, pk=app_id)
+
+        # Check permission: User must be job employer, admin, or staff
+        user = request.user
+        if not (user.is_staff or getattr(user, 'role', '') == 'admin' or application.job.employer == user):
+            return Response(
+                {"detail": "You do not have permission to trigger an AI call for this application."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        from core.utils.ai_call_engine import trigger_ai_call
+        ai_call, message = trigger_ai_call(
+            application,
+            delay_minutes=delay_minutes,
+            ats_threshold=ats_threshold,
+            force=force
+        )
+
+        if not ai_call:
+            return Response(
+                {"error": message, "application_id": app_id},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        status_code = status.HTTP_201_CREATED if ai_call.status == 'queued' else status.HTTP_200_OK
+        return Response({
+            "message": message,
+            "call_details": AICallSerializer(ai_call).data
+        }, status=status_code)
+
+
+class AICallDetailAPIView(APIView):
+    """
+    API: Returns detailed status and tracking info for a specific AI screening call.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk):
+        ai_call = get_object_or_404(AICall.objects.select_related('application__job', 'application__candidate'), pk=pk)
+        user = request.user
+
+        # Access check: Candidate recipient, Job employer, or Admin
+        is_candidate = (user == ai_call.application.candidate)
+        is_employer = (user == ai_call.application.job.employer)
+        is_admin = (user.is_staff or getattr(user, 'role', '') == 'admin')
+
+        if not (is_candidate or is_employer or is_admin):
+            return Response({"detail": "Not authorized to view this call details."}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = AICallSerializer(ai_call)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AICallListAPIView(ListAPIView):
+    """
+    API: Lists AI calls filtered by caller role (Employer, Candidate, Admin).
+    Supports query parameters: ?status=queued&job_id=12
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = AICallSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = AICall.objects.select_related('application__job', 'application__candidate').order_by('-created_at')
+
+        if not (user.is_staff or getattr(user, 'role', '') == 'admin'):
+            if getattr(user, 'role', '') == 'candidate':
+                queryset = queryset.filter(application__candidate=user)
+            else:
+                queryset = queryset.filter(application__job__employer=user)
+
+        status_param = self.request.query_params.get('status')
+        if status_param:
+            queryset = queryset.filter(status=status_param)
+
+        job_id_param = self.request.query_params.get('job_id')
+        if job_id_param:
+            queryset = queryset.filter(application__job_id=job_id_param)
+
+        return queryset
+
+
+class EmployerJobAICallsAPIView(ListAPIView):
+    """
+    Employer API: Retrieves all AI screening call records for a specific job post.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsEmployer]
+    serializer_class = AICallSerializer
+
+    def get_queryset(self):
+        job_id = self.kwargs.get('job_id')
+        job = get_object_or_404(Job, pk=job_id, employer=self.request.user)
+        return AICall.objects.filter(application__job=job).select_related('application__candidate').order_by('-created_at')
+
+
+class AICallRetryAPIView(APIView):
+    """
+    Employer / Admin API: Re-queues a failed or cancelled AI Call.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        ai_call = get_object_or_404(AICall.objects.select_related('application__job'), pk=pk)
+        user = request.user
+
+        if not (user.is_staff or getattr(user, 'role', '') == 'admin' or ai_call.application.job.employer == user):
+            return Response({"detail": "Not authorized to retry this call."}, status=status.HTTP_403_FORBIDDEN)
+
+        from core.utils.ai_call_engine import retry_ai_call
+        delay_minutes = int(request.data.get('delay_minutes', 5))
+        success, message = retry_ai_call(ai_call, delay_minutes=delay_minutes)
+
+        if not success:
+            return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "message": message,
+            "call_details": AICallSerializer(ai_call).data
+        }, status=status.HTTP_200_OK)
+
+
+class AICallCancelAPIView(APIView):
+    """
+    Employer / Admin API: Cancels a queued or pending AI call.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        ai_call = get_object_or_404(AICall.objects.select_related('application__job'), pk=pk)
+        user = request.user
+
+        if not (user.is_staff or getattr(user, 'role', '') == 'admin' or ai_call.application.job.employer == user):
+            return Response({"detail": "Not authorized to cancel this call."}, status=status.HTTP_403_FORBIDDEN)
+
+        from core.utils.ai_call_engine import cancel_ai_call
+        reason = request.data.get('reason', 'Cancelled by recruiter')
+        success, message = cancel_ai_call(ai_call, reason=reason)
+
+        if not success:
+            return Response({"error": message}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "message": message,
+            "call_details": AICallSerializer(ai_call).data
+        }, status=status.HTTP_200_OK)
+
