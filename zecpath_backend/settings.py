@@ -213,3 +213,28 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
     },
 }
+
+
+# ==============================================================================
+# DAY 35: VOICE & AI INTEGRATION SETTINGS
+# ==============================================================================
+import os
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+VOICE_SERVICE_PROVIDER = os.getenv('VOICE_SERVICE_PROVIDER', 'mock')  # 'mock', 'twilio', 'deepgram'
+DEFAULT_VOICE_LANGUAGE = 'en-US'
+DEFAULT_VOICE_GENDER = 'female'  # 'male', 'female', 'neutral'
+VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'  # Or TTS voice profile
+AI_SERVICE_MAX_RETRIES = 3
+AI_SERVICE_TIMEOUT_SECONDS = 15
+
+# ==============================================================================
+# DAY 35: VOICE & AI INTEGRATION SETTINGS
+# ==============================================================================
+import os
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+VOICE_SERVICE_PROVIDER = os.getenv('VOICE_SERVICE_PROVIDER', 'mock')  # 'mock', 'twilio', 'deepgram'
+DEFAULT_VOICE_LANGUAGE = 'en-US'
+DEFAULT_VOICE_GENDER = 'female'  # 'male', 'female', 'neutral'
+VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'  # Or TTS voice profile
+AI_SERVICE_MAX_RETRIES = 3
+AI_SERVICE_TIMEOUT_SECONDS = 15

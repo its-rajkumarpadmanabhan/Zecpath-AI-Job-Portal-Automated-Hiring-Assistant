@@ -1102,3 +1102,73 @@ class AICallCancelAPIView(APIView):
             "call_details": AICallSerializer(ai_call).data
         }, status=status.HTTP_200_OK)
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from core.utils.ai_voice_bridge import AIVoiceBridgeService
+
+class AIVoiceTriggerCallAPIView(APIView):
+    """
+    Employer Endpoint: Triggers an automated outbound AI voice call using the bridge layer.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        phone_number = request.data.get('phone_number')
+        candidate_name = request.data.get('candidate_name', 'Candidate')
+        job_title = request.data.get('job_title', 'Software Engineer')
+
+        if not phone_number:
+            return Response({
+                "status": "error",
+                "message": "Field 'phone_number' is required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        bridge = AIVoiceBridgeService()
+        call_result = bridge.trigger_outbound_call(
+            to_phone_number=phone_number,
+            candidate_name=candidate_name,
+            job_title=job_title
+        )
+
+        return Response({
+            "status": "success",
+            "message": "Outbound AI voice call initialized.",
+            "data": call_result
+        }, status=status.HTTP_202_ACCEPTED)
+
+
+class AIVoiceSynthesizeAPIView(APIView):
+    """
+    Utility Endpoint: Converts text to speech with voice selection.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        text = request.data.get('text')
+        voice_gender = request.data.get('voice_gender', 'female')
+        language_code = request.data.get('language_code', 'en-US')
+
+        if not text:
+            return Response({"status": "error", "message": "Field 'text' is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        bridge = AIVoiceBridgeService()
+        synthesis = bridge.synthesize_speech(text, voice_gender, language_code)
+
+        return Response(synthesis, status=status.HTTP_200_OK)
+
+
+class AIVoiceTranscribeAPIView(APIView):
+    """
+    Utility Endpoint: Transcribes spoken audio into text (STT).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        audio_url = request.data.get('audio_url', 'sample_audio_stream.wav')
+        language_code = request.data.get('language_code', 'en-US')
+
+        bridge = AIVoiceBridgeService()
+        transcription = bridge.transcribe_audio(audio_url, language_code)
+
+        return Response(transcription, status=status.HTTP_200_OK)

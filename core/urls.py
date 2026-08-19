@@ -149,3 +149,15 @@ router.register(r'testing/ai-answers', AIAnswerViewSet, basename='test-aianswers
 router.register(r'testing/call-logs', CallLogViewSet, basename='test-calllogs')
 
 urlpatterns += router.urls
+
+from .views import (
+    AIVoiceTriggerCallAPIView,
+    AIVoiceSynthesizeAPIView,
+    AIVoiceTranscribeAPIView
+)
+
+urlpatterns += [
+    path('voice/trigger-call/', AIVoiceTriggerCallAPIView.as_view(), name='voice-trigger-call'),
+    path('voice/synthesize-speech/', AIVoiceSynthesizeAPIView.as_view(), name='voice-synthesize-speech'),
+    path('voice/transcribe-audio/', AIVoiceTranscribeAPIView.as_view(), name='voice-transcribe-audio'),
+]
