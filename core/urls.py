@@ -161,3 +161,10 @@ urlpatterns += [
     path('voice/synthesize-speech/', AIVoiceSynthesizeAPIView.as_view(), name='voice-synthesize-speech'),
     path('voice/transcribe-audio/', AIVoiceTranscribeAPIView.as_view(), name='voice-transcribe-audio'),
 ]
+
+from .views import AIEvaluateAnswerAPIView, AISessionScoreReportAPIView
+
+urlpatterns += [
+    path('testing/ai-questions/<int:question_id>/evaluate/', AIEvaluateAnswerAPIView.as_view(), name='ai-evaluate-answer'),
+    path('testing/ai-sessions/<int:session_id>/scores/', AISessionScoreReportAPIView.as_view(), name='ai-session-scores'),
+]

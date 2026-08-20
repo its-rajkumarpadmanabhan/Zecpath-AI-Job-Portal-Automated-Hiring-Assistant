@@ -305,13 +305,21 @@ class AIAnswer(models.Model):
     confidence_score = models.FloatField(default=1.0)  # STT model confidence
     audio_duration_seconds = models.FloatField(default=0.0)
     sentiment = models.CharField(max_length=50, blank=True, null=True)  # Positive, Neutral, Negative
+    
+    # Day 37 Evaluation Breakdown Metrics
+    keyword_score = models.FloatField(default=0.0)      # 0 - 100
+    relevance_score = models.FloatField(default=0.0)    # 0 - 100
+    completeness_score = models.FloatField(default=0.0) # 0 - 100
+    final_score = models.FloatField(default=0.0)        # Normalized Weighted Total
+    ai_annotations = models.JSONField(default=dict, blank=True)  # AI commentary & matched keywords
+
     answered_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = 'ai_interview_answers'
 
     def __str__(self):
-        return f"Answer for Q#{self.question_id}"
+        return f"Answer for Q#{self.question_id} (Score: {self.final_score})"
 
 
 # ------------------------------------------------------------------------------

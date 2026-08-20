@@ -1172,3 +1172,111 @@ class AIVoiceTranscribeAPIView(APIView):
         transcription = bridge.transcribe_audio(audio_url, language_code)
 
         return Response(transcription, status=status.HTTP_200_OK)
+
+
+from core.models import AIInterviewSession, AIQuestion, AIAnswer
+from core.utils.answer_evaluator import AnswerScoringEngine
+
+class AIEvaluateAnswerAPIView(APIView):
+    """
+    Endpoint: Submits candidate answer, executes scoring engine, and stores evaluation results.[cite: 2]
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, question_id):
+        question = get_object_or_404(AIQuestion, id=question_id)
+        session = question.session
+        job = session.application.job
+
+        transcript_text = request.data.get('transcript_text', '')
+        confidence_score = float(request.data.get('confidence_score', 0.95))
+
+        if not transcript_text:
+            return Response({
+                "status": "error",
+                "message": "Field 'transcript_text' is required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Execute Scoring Engine[cite: 2]
+        eval_result = AnswerScoringEngine.evaluate_answer(
+            answer_text=transcript_text,
+            required_skills=job.skills_required,
+            question_category=question.category
+        )
+
+        # Store Answer & Evaluation Results[cite: 2]
+        answer, created = AIAnswer.objects.update_or_create(
+            question=question,
+            defaults={
+                'transcript_text': transcript_text,
+                'confidence_score': confidence_score,
+                'keyword_score': eval_result['keyword_score'],
+                'relevance_score': eval_result['relevance_score'],
+                'completeness_score': eval_result['completeness_score'],
+                'final_score': eval_result['final_score'],
+                'ai_annotations': eval_result['annotations'],
+            }
+        )
+
+        return Response({
+            "status": "success",
+            "message": "Answer evaluated and stored successfully.",
+            "answer_id": answer.id,
+            "question_id": question.id,
+            "evaluation": {
+                "keyword_score": answer.keyword_score,
+                "relevance_score": answer.relevance_score,
+                "completeness_score": answer.completeness_score,
+                "final_score": answer.final_score,
+                "confidence_score": answer.confidence_score,
+                "annotations": answer.ai_annotations
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class AISessionScoreReportAPIView(APIView):
+    """
+    Endpoint: Retrieves aggregate scoring breakdown and session analytics.[cite: 2]
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, session_id):
+        session = get_object_or_404(AIInterviewSession, id=session_id)
+        questions = session.questions.all()
+
+        scored_answers = []
+        total_score = 0.0
+        answered_count = 0
+
+        for q in questions:
+            if hasattr(q, 'answer'):
+                ans = q.answer
+                scored_answers.append({
+                    "question_id": q.id,
+                    "question_text": q.question_text,
+                    "category": q.category,
+                    "transcript_text": ans.transcript_text,
+                    "confidence_score": ans.confidence_score,
+                    "keyword_score": ans.keyword_score,
+                    "relevance_score": ans.relevance_score,
+                    "completeness_score": ans.completeness_score,
+                    "final_score": ans.final_score,
+                    "annotations": ans.ai_annotations
+                })
+                total_score += ans.final_score
+                answered_count += 1
+
+        overall_session_score = round(total_score / answered_count, 2) if answered_count > 0 else 0.0
+
+        # Update Session overall score
+        session.ai_score = overall_session_score
+        session.save()
+
+        return Response({
+            "status": "success",
+            "session_id": session.id,
+            "application_id": session.application_id,
+            "overall_session_score": overall_session_score,
+            "total_questions_evaluated": answered_count,
+            "answers_breakdown": scored_answers
+        }, status=status.HTTP_200_OK)
