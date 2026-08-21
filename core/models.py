@@ -360,4 +360,68 @@ class CallLog(models.Model):
         ordering = ['-timestamp']
 
     def __str__(self):
-        return f"AuditLog: {self.event} at {self.timestamp} by {self.triggered_by}"
+        return f"AuditLog: {self.event} at {self.timestamp} by {self.triggered_by}"
+
+# ------------------------------------------------------------------------------
+# 1. Interviewer Availability Slots
+# ------------------------------------------------------------------------------
+class InterviewAvailabilitySlot(models.Model):
+    employer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='availability_slots'
+    )
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    is_booked = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'interview_availability_slots'
+        ordering = ['start_time']
+
+    def __str__(self):
+        return f"Slot {self.id} for {self.employer.email}: {self.start_time} - {self.end_time} (Booked: {self.is_booked})"
+
+
+# ------------------------------------------------------------------------------
+# 2. Automated Interview Schedule
+# ------------------------------------------------------------------------------
+class InterviewSchedule(models.Model):
+    STATUS_CHOICES = (
+        ('scheduled', 'Scheduled'),
+        ('rescheduled', 'Rescheduled'),
+        ('cancelled', 'Cancelled'),
+        ('completed', 'Completed'),
+    )
+
+    application = models.ForeignKey(
+        'Application',
+        on_delete=models.CASCADE,
+        related_name='schedules'
+    )
+    slot = models.OneToOneField(
+        InterviewAvailabilitySlot,
+        on_delete=models.CASCADE,
+        related_name='schedule'
+    )
+    scheduled_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    interview_type = models.CharField(max_length=50, default='AI Voice Screening')
+    meeting_link = models.URLField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    confirmation_sent = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'interview_schedules'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Schedule #{self.id} - App #{self.application_id} at {self.slot.start_time} ({self.status})"
+

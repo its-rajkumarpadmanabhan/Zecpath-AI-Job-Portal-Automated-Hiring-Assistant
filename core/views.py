@@ -1280,3 +1280,91 @@ class AISessionScoreReportAPIView(APIView):
             "total_questions_evaluated": answered_count,
             "answers_breakdown": scored_answers
         }, status=status.HTTP_200_OK)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status, permissions
+from core.models import InterviewAvailabilitySlot, InterviewSchedule
+from core.serializers import InterviewAvailabilitySlotSerializer, InterviewScheduleSerializer
+from core.utils.interview_scheduler import InterviewSchedulerEngine
+from django.utils import timezone
+
+class AvailableSlotsAPIView(APIView):
+    """
+    Retrieves all available, unbooked time slots.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        slots = InterviewAvailabilitySlot.objects.filter(
+            is_booked=False,
+            start_time__gt=timezone.now()
+        ).order_by('start_time')
+        serializer = InterviewAvailabilitySlotSerializer(slots, many=True)
+        return Response({"status": "success", "count": slots.count(), "results": serializer.data})
+
+
+class BookInterviewAPIView(APIView):
+    """
+    Endpoint: Automatically books an interview slot and triggers confirmation.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        application_id = request.data.get('application_id')
+        slot_id = request.data.get('slot_id')
+
+        if not application_id or not slot_id:
+            return Response({
+                "status": "error",
+                "message": "Both 'application_id' and 'slot_id' are required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = InterviewSchedulerEngine.book_interview(
+                application_id=application_id,
+                slot_id=slot_id,
+                user=request.user
+            )
+            return Response({
+                "status": "success",
+                "message": "Interview successfully booked and confirmation sent.",
+                "data": result
+            }, status=status.HTTP_201_CREATED)
+        except ValueError as exc:
+            return Response({
+                "status": "error",
+                "message": str(exc)
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class RescheduleInterviewAPIView(APIView):
+    """
+    Endpoint: Reschedules an existing interview to a new available slot.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, schedule_id):
+        new_slot_id = request.data.get('new_slot_id')
+
+        if not new_slot_id:
+            return Response({
+                "status": "error",
+                "message": "Field 'new_slot_id' is required."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = InterviewSchedulerEngine.reschedule_interview(
+                schedule_id=schedule_id,
+                new_slot_id=new_slot_id
+            )
+            return Response({
+                "status": "success",
+                "message": "Interview successfully rescheduled.",
+                "data": result
+            }, status=status.HTTP_200_OK)
+        except ValueError as exc:
+            return Response({
+                "status": "error",
+                "message": str(exc)
+            }, status=status.HTTP_400_BAD_REQUEST)

@@ -148,6 +148,7 @@ router.register(r'testing/ai-questions', AIQuestionViewSet, basename='test-aique
 router.register(r'testing/ai-answers', AIAnswerViewSet, basename='test-aianswers')
 router.register(r'testing/call-logs', CallLogViewSet, basename='test-calllogs')
 
+
 urlpatterns += router.urls
 
 from .views import (
@@ -167,4 +168,16 @@ from .views import AIEvaluateAnswerAPIView, AISessionScoreReportAPIView
 urlpatterns += [
     path('testing/ai-questions/<int:question_id>/evaluate/', AIEvaluateAnswerAPIView.as_view(), name='ai-evaluate-answer'),
     path('testing/ai-sessions/<int:session_id>/scores/', AISessionScoreReportAPIView.as_view(), name='ai-session-scores'),
+]
+
+from .views import (
+    AvailableSlotsAPIView,
+    BookInterviewAPIView,
+    RescheduleInterviewAPIView
+)
+
+urlpatterns += [
+    path('scheduling/slots/available/', AvailableSlotsAPIView.as_view(), name='scheduling-slots-available'),
+    path('scheduling/book/', BookInterviewAPIView.as_view(), name='scheduling-book'),
+    path('scheduling/<int:schedule_id>/reschedule/', RescheduleInterviewAPIView.as_view(), name='scheduling-reschedule'),
 ]

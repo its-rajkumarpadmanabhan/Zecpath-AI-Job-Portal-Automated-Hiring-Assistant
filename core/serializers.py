@@ -293,3 +293,20 @@ class AICallTriggerSerializer(serializers.Serializer):
     delay_minutes = serializers.IntegerField(default=5, min_value=0)
     ats_threshold = serializers.FloatField(default=75.0, min_value=0.0, max_value=100.0)
     force = serializers.BooleanField(default=False)
+
+from rest_framework import serializers
+from .models import InterviewAvailabilitySlot, InterviewSchedule
+
+class InterviewAvailabilitySlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InterviewAvailabilitySlot
+        fields = '__all__'
+
+
+class InterviewScheduleSerializer(serializers.ModelSerializer):
+    start_time = serializers.DateTimeField(source='slot.start_time', read_only=True)
+    end_time = serializers.DateTimeField(source='slot.end_time', read_only=True)
+
+    class Meta:
+        model = InterviewSchedule
+        fields = ['id', 'application', 'slot', 'start_time', 'end_time', 'meeting_link', 'status', 'confirmation_sent', 'created_at']

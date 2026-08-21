@@ -251,3 +251,58 @@ def execute_ai_call_task(self, ai_call_id):
         logger.error(f"Failed to execute AI call #{ai_call_id}: {exc}")
         raise self.retry(exc=exc)
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_interview_confirmation_email_task(self, schedule_id):
+    """
+    Task Queue 5: Interview Scheduling Confirmation
+    Sends an email to the candidate when an interview is scheduled or rescheduled.
+    """
+    from core.models import InterviewSchedule
+    try:
+        schedule = InterviewSchedule.objects.select_related(
+            'application__candidate', 
+            'application__job',
+            'slot'
+        ).get(pk=schedule_id)
+        
+        candidate = schedule.application.candidate
+        job = schedule.application.job
+        slot = schedule.slot
+
+        if not slot:
+            return {"status": "skipped", "reason": "No slot assigned"}
+
+        action = "Scheduled" if schedule.status == 'scheduled' else "Rescheduled"
+        
+        subject = f"Zecpath: Interview {action} for '{job.title}'"
+        message = (
+            f"Hello {candidate.name},\n\n"
+            f"Your interview for the position '{job.title}' at '{job.company}' "
+            f"has been successfully {action.lower()}.\n\n"
+            f"Date: {slot.date}\n"
+            f"Time: {slot.start_time} - {slot.end_time}\n"
+        )
+        if schedule.meeting_link:
+            message += f"Meeting Link: {schedule.meeting_link}\n"
+            
+        message += (
+            f"\nLog in to your Zecpath dashboard for more details or if you need to reschedule.\n\n"
+            f"Best regards,\n"
+            f"The Zecpath Hiring Assistant Team"
+        )
+
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[candidate.email],
+            fail_silently=False,
+        )
+        logger.info(f"Interview confirmation email sent successfully to {candidate.email} for schedule #{schedule_id}")
+        return {"status": "success", "recipient": candidate.email, "schedule_id": schedule_id}
+    except InterviewSchedule.DoesNotExist:
+        logger.error(f"InterviewSchedule #{schedule_id} not found for email dispatch.")
+        return {"status": "error", "message": "InterviewSchedule not found"}
+    except Exception as exc:
+        logger.error(f"Failed to send interview confirmation email for schedule #{schedule_id}: {exc}")
+        raise self.retry(exc=exc)
