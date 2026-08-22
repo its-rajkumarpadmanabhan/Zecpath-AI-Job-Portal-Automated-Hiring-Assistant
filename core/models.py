@@ -424,4 +424,43 @@ class InterviewSchedule(models.Model):
 
     def __str__(self):
         return f"Schedule #{self.id} - App #{self.application_id} at {self.slot.start_time} ({self.status})"
+
+class ReminderLog(models.Model):
+    """Tracks every reminder attempt, stage, channel, and delivery status."""
+    STAGE_CHOICES = (
+        ('24h_before', '24 Hours Before'),
+        ('1h_before', '1 Hour Before'),
+        ('immediate', 'Immediate Follow-up'),
+    )
+    CHANNEL_CHOICES = (
+        ('email', 'Email'),
+        ('voice', 'Voice Call Hook'),
+        ('sms', 'SMS'),
+    )
+    STATUS_CHOICES = (
+        ('sent', 'Sent'),
+        ('failed', 'Failed'),
+        ('retried', 'Retried'),
+    )
+
+    schedule = models.ForeignKey(
+        'InterviewSchedule',
+        on_delete=models.CASCADE,
+        related_name='reminder_logs'
+    )
+    stage = models.CharField(max_length=20, choices=STAGE_CHOICES)
+    channel = models.CharField(max_length=20, choices=CHANNEL_CHOICES, default='email')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='sent')
+    recipient = models.CharField(max_length=255)
+    subject_or_hook = models.CharField(max_length=255)
+    error_message = models.TextField(blank=True, null=True)
+    retry_count = models.PositiveIntegerField(default=0)
+    sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'ai_interview_reminder_logs'
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"Reminder [{self.stage} - {self.channel}] for Schedule #{self.schedule_id} -> {self.status}"
 

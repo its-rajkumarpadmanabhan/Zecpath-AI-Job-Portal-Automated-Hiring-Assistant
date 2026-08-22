@@ -11,7 +11,6 @@ class InterviewSchedulerEngine:
     Automated scheduling engine managing availability slots, conflict checks,
     rescheduling logic, and automated notification triggers.
     """
-
     @classmethod
     def book_interview(cls, application_id: int, slot_id: int, user) -> dict:
         try:

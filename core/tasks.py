@@ -306,3 +306,10 @@ def send_interview_confirmation_email_task(self, schedule_id):
     except Exception as exc:
         logger.error(f"Failed to send interview confirmation email for schedule #{schedule_id}: {exc}")
         raise self.retry(exc=exc)
+
+from core.utils.reminder_engine import ReminderEngine
+
+@shared_task(name="scan_and_send_interview_reminders")
+def scan_and_send_interview_reminders_task():
+    """Daily / hourly cron job scanning upcoming interviews and dispatching reminders."""
+    return ReminderEngine.process_scheduled_reminders()

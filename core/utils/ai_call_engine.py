@@ -11,7 +11,6 @@ DEFAULT_CALLING_WINDOW_START = 9   # 9:00 AM
 DEFAULT_CALLING_WINDOW_END = 18    # 6:00 PM
 MAX_RETRY_COUNT = 3
 
-
 def check_eligibility(application, ats_threshold=AI_CALL_ATS_THRESHOLD):
     """
     Evaluates if an application is eligible for an AI Screening Call.

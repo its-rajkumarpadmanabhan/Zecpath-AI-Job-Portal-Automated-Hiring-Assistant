@@ -1368,3 +1368,50 @@ class RescheduleInterviewAPIView(APIView):
                 "status": "error",
                 "message": str(exc)
             }, status=status.HTTP_400_BAD_REQUEST)
+
+from core.utils.reminder_engine import ReminderEngine
+from core.models import ReminderLog
+
+class TriggerManualReminderAPIView(APIView):
+    """
+    Endpoint: Triggers an on-demand reminder (24h, 1h, or voice hook) for a specific interview.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, schedule_id):
+        stage = request.data.get('stage', '24h_before')
+        channel = request.data.get('channel', 'email')
+
+        result = ReminderEngine.send_reminder(
+            schedule_id=schedule_id,
+            stage=stage,
+            channel=channel
+        )
+
+        if result.get('status') == 'sent':
+            return Response({"status": "success", "data": result}, status=status.HTTP_200_OK)
+        return Response({"status": "error", "data": result}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ReminderScanCronAPIView(APIView):
+    """
+    Endpoint: Manually invokes the scheduled reminder scanner (simulates periodic cron job).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        scan_results = ReminderEngine.process_scheduled_reminders()
+        return Response({"status": "success", "scan_results": scan_results}, status=status.HTTP_200_OK)
+
+
+class ReminderTrackingLogsAPIView(APIView):
+    """
+    Endpoint: Retrieves sent reminder logs, stages, delivery channels, and failure tracking.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, schedule_id):
+        logs = ReminderLog.objects.filter(schedule_id=schedule_id).values(
+            'id', 'schedule_id', 'stage', 'channel', 'status', 'recipient', 'subject_or_hook', 'retry_count', 'sent_at'
+        )
+        return Response({"status": "success", "count": len(logs), "results": list(logs)}, status=status.HTTP_200_OK)

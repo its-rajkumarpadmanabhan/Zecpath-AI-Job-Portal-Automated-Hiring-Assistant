@@ -181,3 +181,15 @@ urlpatterns += [
     path('scheduling/book/', BookInterviewAPIView.as_view(), name='scheduling-book'),
     path('scheduling/<int:schedule_id>/reschedule/', RescheduleInterviewAPIView.as_view(), name='scheduling-reschedule'),
 ]
+
+from .views import (
+    TriggerManualReminderAPIView,
+    ReminderScanCronAPIView,
+    ReminderTrackingLogsAPIView
+)
+
+urlpatterns += [
+    path('scheduling/reminders/scan/', ReminderScanCronAPIView.as_view(), name='scheduling-reminders-scan'),
+    path('scheduling/<int:schedule_id>/send-reminder/', TriggerManualReminderAPIView.as_view(), name='scheduling-send-reminder'),
+    path('scheduling/<int:schedule_id>/reminder-logs/', ReminderTrackingLogsAPIView.as_view(), name='scheduling-reminder-logs'),
+]
