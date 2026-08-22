@@ -463,4 +463,38 @@ class ReminderLog(models.Model):
 
     def __str__(self):
         return f"Reminder [{self.stage} - {self.channel}] for Schedule #{self.schedule_id} -> {self.status}"
+
+class AICandidateReport(models.Model):
+    """
+    Stores aggregated evaluation reports combining ATS scores, AI screening scores,
+    identified strengths, risks, and overall hiring recommendations.
+    """
+    RECOMMENDATION_CHOICES = (
+        ('strong_hire', 'Strong Hire'),
+        ('hire', 'Hire'),
+        ('neutral', 'Needs Second Review'),
+        ('do_not_hire', 'Do Not Hire'),
+    )
+
+    application = models.OneToOneField(
+        'Application',
+        on_delete=models.CASCADE,
+        related_name='ai_candidate_report'
+    )
+    ats_score = models.FloatField(default=0.0)
+    ai_interview_score = models.FloatField(default=0.0)
+    composite_score = models.FloatField(default=0.0)
+    recommendation = models.CharField(max_length=30, choices=RECOMMENDATION_CHOICES, default='hire')
+    executive_summary = models.TextField()
+    strengths = models.JSONField(default=list, blank=True)
+    risks = models.JSONField(default=list, blank=True)
+    structured_report = models.JSONField(default=dict, blank=True)
+    generated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'ai_candidate_reports'
+        ordering = ['-generated_at']
+
+    def __str__(self):
+        return f"Report for App #{self.application_id} - Score: {self.composite_score} ({self.recommendation})"
 

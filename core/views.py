@@ -1415,3 +1415,52 @@ class ReminderTrackingLogsAPIView(APIView):
             'id', 'schedule_id', 'stage', 'channel', 'status', 'recipient', 'subject_or_hook', 'retry_count', 'sent_at'
         )
         return Response({"status": "success", "count": len(logs), "results": list(logs)}, status=status.HTTP_200_OK)
+
+from core.models import AICandidateReport
+from core.utils.report_generator import AICandidateReportGenerator
+
+class IsEmployerOrRecruiter(permissions.BasePermission):
+    """Access Control: Enforces Recruiter / Employer-only access."""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and getattr(request.user, 'role', '') in ['employer', 'admin']
+
+
+class GenerateCandidateReportAPIView(APIView):
+    """
+    Recruiter Endpoint: Generates or refreshes the structured AI candidate report.
+    """
+    permission_classes = [IsEmployerOrRecruiter]
+
+    def post(self, request, application_id):
+        try:
+            report_data = AICandidateReportGenerator.generate_report(application_id=application_id)
+            return Response({
+                "status": "success",
+                "message": "AI candidate evaluation report generated successfully.",
+                "data": report_data
+            }, status=status.HTTP_201_CREATED)
+        except ValueError as exc:
+            return Response({"status": "error", "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CandidateReportSummaryAPIView(APIView):
+    """
+    Recruiter Endpoint: Retrieves the stored structured report & summary in JSON format.
+    """
+    permission_classes = [IsEmployerOrRecruiter]
+
+    def get(self, request, application_id):
+        report = AICandidateReport.objects.filter(application_id=application_id).first()
+        if not report:
+            # Auto-generate if not created yet
+            try:
+                report_data = AICandidateReportGenerator.generate_report(application_id=application_id)
+                return Response({"status": "success", "data": report_data}, status=status.HTTP_200_OK)
+            except ValueError as exc:
+                return Response({"status": "error", "message": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "status": "success",
+            "report_id": report.id,
+            "data": report.structured_report
+        }, status=status.HTTP_200_OK)

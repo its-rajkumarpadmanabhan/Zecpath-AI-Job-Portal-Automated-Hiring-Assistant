@@ -193,3 +193,10 @@ urlpatterns += [
     path('scheduling/<int:schedule_id>/send-reminder/', TriggerManualReminderAPIView.as_view(), name='scheduling-send-reminder'),
     path('scheduling/<int:schedule_id>/reminder-logs/', ReminderTrackingLogsAPIView.as_view(), name='scheduling-reminder-logs'),
 ]
+
+from .views import GenerateCandidateReportAPIView, CandidateReportSummaryAPIView
+
+urlpatterns += [
+    path('recruiter/applications/<int:application_id>/generate-report/', GenerateCandidateReportAPIView.as_view(), name='recruiter-generate-report'),
+    path('recruiter/applications/<int:application_id>/report-summary/', CandidateReportSummaryAPIView.as_view(), name='recruiter-report-summary'),
+]
