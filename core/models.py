@@ -497,4 +497,80 @@ class AICandidateReport(models.Model):
 
     def __str__(self):
         return f"Report for App #{self.application_id} - Score: {self.composite_score} ({self.recommendation})"
+
+
+# ------------------------------------------------------------------------------
+# Day 42: System Audit & Security Compliance Models
+# ------------------------------------------------------------------------------
+class SystemAuditTrail(models.Model):
+    """Tracks critical User, Admin, and AI actions for system compliance."""
+    ACTOR_TYPE_CHOICES = (
+        ('user', 'User Action'),
+        ('admin', 'Admin Action'),
+        ('ai_system', 'AI System Action'),
+    )
+    ACTION_CATEGORY_CHOICES = (
+        ('auth', 'Authentication & Access'),
+        ('job', 'Job Management'),
+        ('application', 'Application Status Change'),
+        ('ai_eval', 'AI Screening & Scoring'),
+        ('scheduling', 'Interview Scheduling'),
+        ('admin_mod', 'Admin Moderation'),
+    )
+
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='audit_trails'
+    )
+    actor_type = models.CharField(max_length=20, choices=ACTOR_TYPE_CHOICES, default='user')
+    action_category = models.CharField(max_length=30, choices=ACTION_CATEGORY_CHOICES)
+    action_name = models.CharField(max_length=150)
+    target_entity = models.CharField(max_length=100, blank=True, null=True)
+    target_id = models.CharField(max_length=50, blank=True, null=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, null=True)
+    payload_snapshot = models.JSONField(default=dict, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'system_audit_trails'
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.actor_type.upper()}] {self.action_name} by {self.actor or 'System'} at {self.timestamp}"
+
+
+class SecurityFailureLog(models.Model):
+    """Tracks unauthorized access attempts, system exceptions, and retried operations."""
+    SEVERITY_CHOICES = (
+        ('info', 'Informational'),
+        ('warning', 'Security Warning'),
+        ('critical', 'Critical Security Failure'),
+    )
+    EVENT_TYPE_CHOICES = (
+        ('unauthorized_access', 'Unauthorized Access Attempt'),
+        ('forbidden_role', 'Role Permission Violation'),
+        ('system_exception', 'System Runtime Exception'),
+        ('service_retry', 'Service Retry Failure'),
+    )
+
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPE_CHOICES)
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='warning')
+    endpoint = models.CharField(max_length=255)
+    http_method = models.CharField(max_length=10)
+    user_identifier = models.CharField(max_length=150, blank=True, null=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    exception_details = models.TextField(blank=True, null=True)
+    stack_trace = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'system_security_failure_logs'
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"[{self.severity.upper()}] {self.event_type} at {self.endpoint} ({self.timestamp})"
 

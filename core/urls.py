@@ -211,3 +211,17 @@ urlpatterns += [
     path('recruiter/analytics/funnel/', RecruiterFunnelAnalyticsAPIView.as_view(), name='recruiter-analytics-funnel'),
     path('recruiter/analytics/jobs-performance/', RecruiterJobPerformanceAPIView.as_view(), name='recruiter-analytics-jobs-performance'),
 ]
+
+# Day 42: Audit & Security Monitoring Routes
+from .views import (
+    AuditTrailLogsAPIView,
+    SecurityAndFailureLogsAPIView,
+    CreateAuditOrSecurityEventAPIView,
+)
+
+urlpatterns += [
+    path('monitoring/audit-trails/', AuditTrailLogsAPIView.as_view(), name='monitoring-audit-trails'),
+    path('monitoring/security-logs/', SecurityAndFailureLogsAPIView.as_view(), name='monitoring-security-logs'),
+    path('monitoring/log-event/', CreateAuditOrSecurityEventAPIView.as_view(), name='monitoring-log-event'),
+]
+

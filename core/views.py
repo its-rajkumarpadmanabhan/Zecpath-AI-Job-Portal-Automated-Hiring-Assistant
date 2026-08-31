@@ -1509,3 +1509,137 @@ class RecruiterJobPerformanceAPIView(APIView):
             "count": len(job_performance),
             "data": job_performance
         }, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# 11. AUDIT & SECURITY MONITORING VIEWS (DAY 42)
+# =============================================================================
+from core.models import SystemAuditTrail, SecurityFailureLog
+from core.utils.observability import ObservabilityService
+
+class IsAdminUserOnly(permissions.BasePermission):
+    """Admin-only access control for compliance and security audit logs."""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            ObservabilityService.log_security_or_failure(
+                request=request,
+                event_type='unauthorized_access',
+                severity='warning',
+                custom_message='Unauthenticated access attempt to compliance log API.'
+            )
+            return False
+
+        user_role = str(getattr(request.user, 'role', '')).lower()
+        is_admin = user_role == 'admin' or request.user.is_staff or request.user.is_superuser
+
+        if not is_admin:
+            ObservabilityService.log_security_or_failure(
+                request=request,
+                event_type='forbidden_role',
+                severity='warning',
+                custom_message=f"User {request.user.email} (Role: {user_role}) attempted unauthorized access to admin audit trails."
+            )
+            return False
+        return True
+
+
+class AuditTrailLogsAPIView(APIView):
+    """
+    Endpoint: Returns comprehensive system audit logs (User, Admin, AI actions).
+    """
+    permission_classes = [IsAdminUserOnly]
+
+    def get(self, request):
+        category = request.GET.get('category')
+        actor_type = request.GET.get('actor_type')
+
+        qs = SystemAuditTrail.objects.select_related('actor').all()
+        if category:
+            qs = qs.filter(action_category=category)
+        if actor_type:
+            qs = qs.filter(actor_type=actor_type)
+
+        audit_data = [
+            {
+                "id": log.id,
+                "actor": log.actor.email if log.actor else "AI System",
+                "actor_type": log.actor_type,
+                "action_category": log.action_category,
+                "action_name": log.action_name,
+                "target_entity": log.target_entity,
+                "target_id": log.target_id,
+                "ip_address": log.ip_address,
+                "payload_snapshot": log.payload_snapshot,
+                "timestamp": log.timestamp.isoformat()
+            }
+            for log in qs[:50]
+        ]
+        return Response({
+            "status": "success",
+            "count": len(audit_data),
+            "results": audit_data
+        }, status=status.HTTP_200_OK)
+
+
+class SecurityAndFailureLogsAPIView(APIView):
+    """
+    Endpoint: Returns security alert logs and exception/retry tracking records.
+    """
+    permission_classes = [IsAdminUserOnly]
+
+    def get(self, request):
+        event_type = request.GET.get('event_type')
+        qs = SecurityFailureLog.objects.all()
+        if event_type:
+            qs = qs.filter(event_type=event_type)
+
+        logs = [
+            {
+                "id": entry.id,
+                "event_type": entry.event_type,
+                "severity": entry.severity,
+                "endpoint": entry.endpoint,
+                "http_method": entry.http_method,
+                "user_identifier": entry.user_identifier,
+                "ip_address": entry.ip_address,
+                "exception_details": entry.exception_details,
+                "timestamp": entry.timestamp.isoformat()
+            }
+            for entry in qs[:50]
+        ]
+        return Response({
+            "status": "success",
+            "count": len(logs),
+            "results": logs
+        }, status=status.HTTP_200_OK)
+
+
+class CreateAuditOrSecurityEventAPIView(APIView):
+    """
+    Endpoint: Demonstrates manual/hook-driven logging of AI and System events.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        action_name = request.data.get('action_name', 'AI Voice Analysis Completed')
+        action_category = request.data.get('action_category', 'ai_eval')
+        actor_type = request.data.get('actor_type', 'ai_system')
+        target_entity = request.data.get('target_entity', 'AIInterviewSession')
+        target_id = request.data.get('target_id', '1')
+        payload = request.data.get('payload', {"confidence": 0.98, "status": "verified"})
+
+        log_entry = ObservabilityService.log_audit(
+            request=request,
+            actor_type=actor_type,
+            action_category=action_category,
+            action_name=action_name,
+            target_entity=target_entity,
+            target_id=target_id,
+            payload=payload
+        )
+
+        return Response({
+            "status": "success",
+            "message": "Audit event recorded successfully.",
+            "audit_id": log_entry.id
+        }, status=status.HTTP_201_CREATED)
