@@ -1422,7 +1422,10 @@ from core.utils.report_generator import AICandidateReportGenerator
 class IsEmployerOrRecruiter(permissions.BasePermission):
     """Access Control: Enforces Recruiter / Employer-only access."""
     def has_permission(self, request, view):
-        return request.user.is_authenticated and getattr(request.user, 'role', '') in ['employer', 'admin']
+        if not request.user or not request.user.is_authenticated:
+            return False
+        user_role = str(getattr(request.user, 'role', '')).lower()
+        return user_role in ['employer', 'recruiter', 'admin'] or request.user.is_staff or request.user.is_superuser
 
 
 class GenerateCandidateReportAPIView(APIView):
@@ -1432,13 +1435,19 @@ class GenerateCandidateReportAPIView(APIView):
     permission_classes = [IsEmployerOrRecruiter]
 
     def post(self, request, application_id):
+        return self._handle_report(application_id)
+
+    def get(self, request, application_id):
+        return self._handle_report(application_id)
+
+    def _handle_report(self, application_id):
         try:
             report_data = AICandidateReportGenerator.generate_report(application_id=application_id)
             return Response({
                 "status": "success",
                 "message": "AI candidate evaluation report generated successfully.",
                 "data": report_data
-            }, status=status.HTTP_201_CREATED)
+            }, status=status.HTTP_200_OK)
         except ValueError as exc:
             return Response({"status": "error", "message": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1463,4 +1472,40 @@ class CandidateReportSummaryAPIView(APIView):
             "status": "success",
             "report_id": report.id,
             "data": report.structured_report
+        }, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# 10. RECRUITER ANALYTICS & FUNNEL ENGINE VIEWS (DAY 41)
+# =============================================================================
+from core.utils.recruiter_analytics import RecruiterAnalyticsEngine
+
+class RecruiterFunnelAnalyticsAPIView(APIView):
+    """
+    Endpoint: Returns hiring funnel metrics and conversion ratios.
+    """
+    permission_classes = [IsEmployerOrRecruiter]
+
+    def get(self, request):
+        employer_id = request.user.id if not request.user.is_superuser else None
+        funnel_metrics = RecruiterAnalyticsEngine.get_overall_funnel_metrics(employer_id=employer_id)
+        return Response({
+            "status": "success",
+            "data": funnel_metrics
+        }, status=status.HTTP_200_OK)
+
+
+class RecruiterJobPerformanceAPIView(APIView):
+    """
+    Endpoint: Returns job-wise performance and role-based aggregation stats.
+    """
+    permission_classes = [IsEmployerOrRecruiter]
+
+    def get(self, request):
+        employer_id = request.user.id if not request.user.is_superuser else None
+        job_performance = RecruiterAnalyticsEngine.get_job_performance_metrics(employer_id=employer_id)
+        return Response({
+            "status": "success",
+            "count": len(job_performance),
+            "data": job_performance
         }, status=status.HTTP_200_OK)

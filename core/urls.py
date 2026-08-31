@@ -200,3 +200,14 @@ urlpatterns += [
     path('recruiter/applications/<int:application_id>/generate-report/', GenerateCandidateReportAPIView.as_view(), name='recruiter-generate-report'),
     path('recruiter/applications/<int:application_id>/report-summary/', CandidateReportSummaryAPIView.as_view(), name='recruiter-report-summary'),
 ]
+
+# Day 41: Recruiter Analytics & Funnel Routes
+from .views import (
+    RecruiterFunnelAnalyticsAPIView,
+    RecruiterJobPerformanceAPIView
+)
+
+urlpatterns += [
+    path('recruiter/analytics/funnel/', RecruiterFunnelAnalyticsAPIView.as_view(), name='recruiter-analytics-funnel'),
+    path('recruiter/analytics/jobs-performance/', RecruiterJobPerformanceAPIView.as_view(), name='recruiter-analytics-jobs-performance'),
+]
