@@ -181,6 +181,18 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
+
+    # Day 43: API Throttling & Rate Limiting
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '30/minute',           # Anonymous users rate limit
+        'user': '120/minute',          # Authenticated users rate limit
+        'ai_abuse': '5/minute',        # Strict throttle for expensive AI endpoints
+        'auth_strict': '5/minute',     # Strict throttle for login / sensitive attempts
+    },
 }
 
 # Email Backend Configuration (Console Output for local testing)
@@ -238,3 +250,9 @@ DEFAULT_VOICE_GENDER = 'female'  # 'male', 'female', 'neutral'
 VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'  # Or TTS voice profile
 AI_SERVICE_MAX_RETRIES = 3
 AI_SERVICE_TIMEOUT_SECONDS = 15
+
+# ==============================================================================
+# DAY 43: FIELD ENCRYPTION KEY FOR SENSITIVE DATA
+# ==============================================================================
+# Derives a 32-byte key from SECRET_KEY for Fernet symmetric encryption
+FIELD_ENCRYPTION_KEY = SECRET_KEY.encode()[:32]

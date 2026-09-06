@@ -225,3 +225,15 @@ urlpatterns += [
     path('monitoring/log-event/', CreateAuditOrSecurityEventAPIView.as_view(), name='monitoring-log-event'),
 ]
 
+# Day 43: Security Shield — Throttling, Encryption & Attack Simulation Routes
+from .views import (
+    EncryptedDataHandlingAPIView,
+    SecurityAttackSimulationAPIView,
+    SecurityReportAuditAPIView,
+)
+
+urlpatterns += [
+    path('security/encrypt-sensitive-data/', EncryptedDataHandlingAPIView.as_view(), name='security-encrypt-sensitive-data'),
+    path('security/simulate-attack/', SecurityAttackSimulationAPIView.as_view(), name='security-simulate-attack'),
+    path('security/report/', SecurityReportAuditAPIView.as_view(), name='security-report'),
+]

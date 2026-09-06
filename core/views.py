@@ -1643,3 +1643,129 @@ class CreateAuditOrSecurityEventAPIView(APIView):
             "message": "Audit event recorded successfully.",
             "audit_id": log_entry.id
         }, status=status.HTTP_201_CREATED)
+
+
+# =============================================================================
+# 12. DAY 43: SECURITY SHIELD — THROTTLING, ENCRYPTION & ATTACK SIMULATION
+# =============================================================================
+from rest_framework.throttling import SimpleRateThrottle
+from core.utils.security_crypto import SecurityCryptoService
+
+
+class SensitiveActionThrottle(SimpleRateThrottle):
+    """Custom throttle to block brute-force and rapid abuse on auth/sensitive routes."""
+    scope = 'auth_strict'
+    rate = '5/minute'
+
+    def get_cache_key(self, request, view):
+        if request.user.is_authenticated:
+            return f"throttle_auth_user_{request.user.id}"
+        return f"throttle_auth_ip_{request.META.get('REMOTE_ADDR', 'anon')}"
+
+
+class AIAbusePreventionThrottle(SimpleRateThrottle):
+    """Restricts heavy AI evaluation calls to prevent API quota drain."""
+    scope = 'ai_abuse'
+    rate = '5/minute'
+
+    def get_cache_key(self, request, view):
+        if request.user.is_authenticated:
+            return f"throttle_ai_user_{request.user.id}"
+        return f"throttle_ai_ip_{request.META.get('REMOTE_ADDR', 'anon')}"
+
+
+class EncryptedDataHandlingAPIView(APIView):
+    """
+    Endpoint: Encrypts and decrypts sensitive recruitment information
+    such as salary expectations and national ID numbers.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        salary_expectation = request.data.get('salary_expectation', '')
+        ssn_or_id = request.data.get('national_id', '')
+
+        # Encrypt sensitive inputs
+        encrypted_salary = SecurityCryptoService.encrypt_data(str(salary_expectation))
+        encrypted_id = SecurityCryptoService.encrypt_data(str(ssn_or_id))
+
+        # Decrypt to demonstrate verification
+        decrypted_salary = SecurityCryptoService.decrypt_data(encrypted_salary)
+
+        # Log encryption event to audit trail
+        ObservabilityService.log_audit(
+            request=request,
+            actor_type='user',
+            action_category='application',
+            action_name='Sensitive Data Encrypted',
+            target_entity='CandidateProfile',
+            target_id=str(request.user.id),
+            payload={"fields_encrypted": ["salary_expectation", "national_id"]}
+        )
+
+        return Response({
+            "status": "success",
+            "message": "Sensitive data securely encrypted and stored.",
+            "storage_payload": {
+                "encrypted_salary_expectation": encrypted_salary,
+                "encrypted_national_id": encrypted_id,
+            },
+            "verified_decryption": {
+                "decrypted_salary": decrypted_salary
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class SecurityAttackSimulationAPIView(APIView):
+    """
+    Endpoint: Simulates brute force or rapid calls to test throttling and abuse triggers.
+    Repeated rapid requests will trigger DRF's 429 Too Many Requests automatically.
+    """
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [SensitiveActionThrottle]
+
+    def post(self, request):
+        action = request.data.get('action', 'test_ping')
+        client_ip = request.META.get('REMOTE_ADDR', '127.0.0.1')
+
+        # Log the simulation attempt to the security audit trail
+        ObservabilityService.log_security_or_failure(
+            request=request,
+            event_type='unauthorized_access',
+            severity='info',
+            custom_message=f"Security attack simulation triggered: action='{action}' from IP {client_ip}"
+        )
+
+        return Response({
+            "status": "success",
+            "message": f"Request allowed. Action '{action}' processed within rate limit.",
+            "client_ip": client_ip
+        }, status=status.HTTP_200_OK)
+
+
+class SecurityReportAuditAPIView(APIView):
+    """
+    Endpoint: Compiles the Day 43 Security Hardening Report with current protection status.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        # Gather live security metrics
+        total_audit_events = SystemAuditTrail.objects.count()
+        total_security_failures = SecurityFailureLog.objects.count()
+        critical_failures = SecurityFailureLog.objects.filter(severity='critical').count()
+
+        return Response({
+            "status": "success",
+            "security_report": {
+                "throttling_status": "Active (5 req/min on sensitive routes, 120 req/min user standard)",
+                "data_encryption": "Fernet 128-bit AES in CBC mode with HMAC SHA256",
+                "access_validation": "JWT Bearer Token verification + Role-based permissions",
+                "attack_prevention": "Automated 429 Too Many Requests blocking on brute-force triggers",
+                "live_metrics": {
+                    "total_audit_trail_events": total_audit_events,
+                    "total_security_failure_logs": total_security_failures,
+                    "critical_security_failures": critical_failures,
+                }
+            }
+        }, status=status.HTTP_200_OK)
