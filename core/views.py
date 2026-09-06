@@ -1,5 +1,6 @@
 from email.mime import application
 import os
+import time
 from django.db.models import Count, Q
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
@@ -1774,7 +1775,6 @@ class SecurityReportAuditAPIView(APIView):
 # =============================================================================
 # 13. DAY 44: LOAD TESTING, STRESS BENCHMARKS & QUERY OPTIMIZATION
 # =============================================================================
-import time as _time
 from core.utils.load_testing import SystemBenchmarkService
 
 
@@ -1802,6 +1802,7 @@ class StressTestTriggerAPIView(APIView):
     def get(self, request):
         return Response({
             "status": "healthy",
-            "server_time": _time.time(),
+            "server_time": time.time(),
             "load_state": "normal"
         }, status=status.HTTP_200_OK)
+
