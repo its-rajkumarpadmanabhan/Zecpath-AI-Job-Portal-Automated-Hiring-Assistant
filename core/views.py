@@ -1769,3 +1769,39 @@ class SecurityReportAuditAPIView(APIView):
                 }
             }
         }, status=status.HTTP_200_OK)
+
+
+# =============================================================================
+# 13. DAY 44: LOAD TESTING, STRESS BENCHMARKS & QUERY OPTIMIZATION
+# =============================================================================
+import time as _time
+from core.utils.load_testing import SystemBenchmarkService
+
+
+class SystemLoadBenchmarkAPIView(APIView):
+    """
+    Endpoint: Runs query optimization benchmarking and returns load test performance report.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        report = SystemBenchmarkService.get_load_test_summary()
+        return Response({
+            "status": "success",
+            "message": "Load testing stability and query benchmarks calculated successfully.",
+            "data": report
+        }, status=status.HTTP_200_OK)
+
+
+class StressTestTriggerAPIView(APIView):
+    """
+    Endpoint: Lightweight synthetic endpoint designed to receive high-concurrency pings.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({
+            "status": "healthy",
+            "server_time": _time.time(),
+            "load_state": "normal"
+        }, status=status.HTTP_200_OK)

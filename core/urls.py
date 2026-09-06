@@ -237,3 +237,11 @@ urlpatterns += [
     path('security/simulate-attack/', SecurityAttackSimulationAPIView.as_view(), name='security-simulate-attack'),
     path('security/report/', SecurityReportAuditAPIView.as_view(), name='security-report'),
 ]
+
+# Day 44: Load Testing, Stress Benchmarks & Query Optimization Routes
+from .views import SystemLoadBenchmarkAPIView, StressTestTriggerAPIView
+
+urlpatterns += [
+    path('load-test/benchmark-report/', SystemLoadBenchmarkAPIView.as_view(), name='load-test-benchmark-report'),
+    path('load-test/ping/', StressTestTriggerAPIView.as_view(), name='load-test-ping'),
+]
