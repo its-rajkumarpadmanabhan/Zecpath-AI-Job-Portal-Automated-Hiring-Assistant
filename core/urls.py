@@ -263,3 +263,17 @@ urlpatterns += [
     path('system/api-overview/', SystemOverviewDocumentationAPIView.as_view(), name='system-api-overview'),
 ]
 
+# Day 46: SaaS Monetization, Subscriptions & Billing Routes
+from .views import (
+    SubscriptionPlanListAPIView,
+    CurrentSubscriptionDetailAPIView,
+    MockSubscribePlanAPIView
+)
+
+urlpatterns += [
+    path('billing/plans/', SubscriptionPlanListAPIView.as_view(), name='billing-plans'),
+    path('billing/my-subscription/', CurrentSubscriptionDetailAPIView.as_view(), name='billing-my-subscription'),
+    path('billing/subscribe/', MockSubscribePlanAPIView.as_view(), name='billing-subscribe'),
+]
+
+

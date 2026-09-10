@@ -46,3 +46,33 @@ class IsCandidate(BasePermission):
             and request.user.is_authenticated
             and request.user.role == "candidate"
         )
+
+
+class RequiresActiveSubscription(BasePermission):
+    """Requires the authenticated user to hold an active paid or free subscription."""
+    message = "An active subscription plan is required to access this feature."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        sub = getattr(request.user, 'subscription', None)
+        return sub is not None and sub.is_valid
+
+
+class RequiresTier(BasePermission):
+    """Base class for tier-specific feature gates."""
+    required_tiers = []
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        sub = getattr(request.user, 'subscription', None)
+        if not sub or not sub.is_valid:
+            return False
+        return sub.plan.name in self.required_tiers
+
+
+class RequiresProOrEnterpriseTier(RequiresTier):
+    """Gates access to advanced recruiter analytics and high-volume tools."""
+    required_tiers = ['pro', 'enterprise']
+    message = "This endpoint requires an active Pro or Enterprise subscription."

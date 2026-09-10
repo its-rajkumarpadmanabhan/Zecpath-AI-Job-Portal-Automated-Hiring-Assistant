@@ -1855,3 +1855,107 @@ class SystemOverviewDocumentationAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# =============================================================================
+# 15. DAY 46: SAAS MONETIZATION, SUBSCRIPTIONS & BILLING APIS
+# =============================================================================
+import uuid
+from datetime import timedelta
+from core.models import SubscriptionPlan, UserSubscription, PaymentTransaction, BillingHistory
+from core.permissions import RequiresProOrEnterpriseTier
+
+
+class SubscriptionPlanListAPIView(APIView):
+    """List all available public subscription tiers and features."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        plans = SubscriptionPlan.objects.filter(is_active=True).values(
+            'id', 'name', 'display_title', 'price', 'billing_cycle',
+            'max_active_jobs', 'max_ai_screenings_per_month', 'has_advanced_analytics'
+        )
+        return Response({"status": "success", "plans": list(plans)}, status=status.HTTP_200_OK)
+
+
+class CurrentSubscriptionDetailAPIView(APIView):
+    """Retrieve the requesting employer's active plan, validity, and limits."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        sub = getattr(request.user, 'subscription', None)
+        if not sub:
+            return Response({
+                "status": "success",
+                "has_subscription": False,
+                "message": "No active subscription. Defaulting to restricted free limits."
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "status": "success",
+            "has_subscription": True,
+            "subscription": {
+                "plan": sub.plan.name,
+                "display_title": sub.plan.display_title,
+                "status": sub.status,
+                "valid": sub.is_valid,
+                "current_period_end": sub.current_period_end.isoformat(),
+                "entitlements": {
+                    "max_active_jobs": sub.plan.max_active_jobs,
+                    "has_advanced_analytics": sub.plan.has_advanced_analytics
+                }
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class MockSubscribePlanAPIView(APIView):
+    """Simulates upgrading/subscribing to a tier and recording transactions."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        plan_name = request.data.get('plan_name', 'pro')
+        plan = SubscriptionPlan.objects.filter(name=plan_name, is_active=True).first()
+        if not plan:
+            return Response({"error": f"Plan '{plan_name}' not found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 1. Simulate Payment Transaction
+        tx_ref = f"TX-{uuid.uuid4().hex[:10].upper()}"
+        transaction = PaymentTransaction.objects.create(
+            user=request.user,
+            amount=plan.price,
+            currency="USD",
+            payment_method="mock_card",
+            transaction_reference=tx_ref,
+            status="succeeded"
+        )
+
+        # 2. Update or Create User Subscription
+        period_days = 365 if plan.billing_cycle == 'yearly' else 30
+        end_date = timezone.now() + timedelta(days=period_days)
+
+        subscription, _ = UserSubscription.objects.update_or_create(
+            user=request.user,
+            defaults={
+                'plan': plan,
+                'status': 'active',
+                'start_date': timezone.now(),
+                'current_period_end': end_date,
+                'cancel_at_period_end': False
+            }
+        )
+
+        # 3. Create Billing Invoice Record
+        BillingHistory.objects.create(
+            user=request.user,
+            transaction=transaction,
+            invoice_number=f"INV-{uuid.uuid4().hex[:8].upper()}",
+            amount_paid=plan.price
+        )
+
+        return Response({
+            "status": "success",
+            "message": f"Successfully subscribed to {plan.display_title}.",
+            "transaction_reference": tx_ref,
+            "expires_at": end_date.isoformat()
+        }, status=status.HTTP_201_CREATED)
+
+
+

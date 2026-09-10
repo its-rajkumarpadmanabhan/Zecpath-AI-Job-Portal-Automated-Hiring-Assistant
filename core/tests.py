@@ -298,4 +298,59 @@ class SystemReadinessAndOverviewTests(APITestCase):
         self.assertIn('subsystem_health', data)
         self.assertIn('readiness_signoff', data)
 
+
+class SaaSMonetizationAndSubscriptionTests(APITestCase):
+    def setUp(self):
+        from core.models import SubscriptionPlan, UserSubscription, PaymentTransaction, BillingHistory
+        self.free_plan, _ = SubscriptionPlan.objects.get_or_create(
+            name='free',
+            defaults={'display_title': 'Free Tier', 'price': 0.00, 'max_active_jobs': 2, 'max_ai_screenings_per_month': 5, 'has_advanced_analytics': False}
+        )
+        self.pro_plan, _ = SubscriptionPlan.objects.get_or_create(
+            name='pro',
+            defaults={'display_title': 'Pro Recruiter', 'price': 49.00, 'max_active_jobs': -1, 'max_ai_screenings_per_month': 100, 'has_advanced_analytics': True}
+        )
+        self.employer_user = User.objects.create_user(
+            email="employer_billing@example.com",
+            password="Password123!",
+            name="Employer Billing User",
+            role="employer"
+        )
+
+    def test_list_subscription_plans_public(self):
+        """Verify public subscription plans listing."""
+        response = self.client.get('/api/billing/plans/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'success')
+        self.assertTrue(len(response.data.get('plans', [])) >= 2)
+
+    def test_my_subscription_unauthenticated(self):
+        """Verify subscription detail endpoint requires authentication."""
+        response = self.client.get('/api/billing/my-subscription/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_my_subscription_no_active_plan(self):
+        """Verify response when user has no active subscription."""
+        self.client.force_authenticate(user=self.employer_user)
+        response = self.client.get('/api/billing/my-subscription/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data.get('has_subscription'))
+
+    def test_mock_subscribe_plan_success(self):
+        """Verify subscribing to Pro tier creates transaction, subscription, and invoice."""
+        self.client.force_authenticate(user=self.employer_user)
+        response = self.client.post('/api/billing/subscribe/', {'plan_name': 'pro'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data.get('status'), 'success')
+        self.assertIn('transaction_reference', response.data)
+        self.assertIn('expires_at', response.data)
+
+        # Verify my-subscription detail now returns valid subscription
+        sub_resp = self.client.get('/api/billing/my-subscription/')
+        self.assertEqual(sub_resp.status_code, status.HTTP_200_OK)
+        self.assertTrue(sub_resp.data.get('has_subscription'))
+        self.assertEqual(sub_resp.data['subscription']['plan'], 'pro')
+        self.assertTrue(sub_resp.data['subscription']['valid'])
+
+
 

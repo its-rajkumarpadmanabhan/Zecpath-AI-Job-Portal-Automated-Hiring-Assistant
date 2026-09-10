@@ -2,6 +2,7 @@ import os
 import uuid
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.contrib.auth.base_user import BaseUserManager
 
@@ -573,4 +574,114 @@ class SecurityFailureLog(models.Model):
 
     def __str__(self):
         return f"[{self.severity.upper()}] {self.event_type} at {self.endpoint} ({self.timestamp})"
+
+
+# ------------------------------------------------------------------------------
+# Day 46: SaaS Monetization, Subscriptions, & Billing Models
+# ------------------------------------------------------------------------------
+class SubscriptionPlan(models.Model):
+    """Defines available SaaS pricing tiers and feature entitlements."""
+    TIER_CHOICES = (
+        ('free', 'Free Tier'),
+        ('pro', 'Pro Tier'),
+        ('enterprise', 'Enterprise Tier'),
+    )
+    BILLING_CYCLE_CHOICES = (
+        ('monthly', 'Monthly'),
+        ('yearly', 'Yearly'),
+    )
+
+    name = models.CharField(max_length=50, choices=TIER_CHOICES, unique=True)
+    display_title = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    billing_cycle = models.CharField(max_length=20, choices=BILLING_CYCLE_CHOICES, default='monthly')
+    max_active_jobs = models.IntegerField(default=2)  # -1 for unlimited
+    max_ai_screenings_per_month = models.IntegerField(default=5)  # -1 for unlimited
+    has_advanced_analytics = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'subscription_plans'
+
+    def __str__(self):
+        return f"{self.display_title} (${self.price}/{self.billing_cycle})"
+
+
+class UserSubscription(models.Model):
+    """Tracks active subscriptions, renewals, and statuses per employer."""
+    STATUS_CHOICES = (
+        ('active', 'Active'),
+        ('past_due', 'Past Due'),
+        ('canceled', 'Canceled'),
+        ('expired', 'Expired'),
+    )
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='subscription'
+    )
+    plan = models.ForeignKey(SubscriptionPlan, on_delete=models.PROTECT, related_name='subscriptions')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    start_date = models.DateTimeField(default=timezone.now)
+    current_period_end = models.DateTimeField()
+    cancel_at_period_end = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'user_subscriptions'
+
+    def __str__(self):
+        return f"{self.user.email} - {self.plan.name} ({self.status})"
+
+    @property
+    def is_valid(self):
+        return self.status == 'active' and self.current_period_end >= timezone.now()
+
+
+class PaymentTransaction(models.Model):
+    """Records individual payment charges, gate attempts, and external IDs."""
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('succeeded', 'Succeeded'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='transactions')
+    subscription = models.ForeignKey(UserSubscription, on_delete=models.SET_NULL, null=True, blank=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=10, default='USD')
+    payment_method = models.CharField(max_length=50, default='stripe')
+    transaction_reference = models.CharField(max_length=100, unique=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    raw_response = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'payment_transactions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.transaction_reference} - {self.amount} {self.currency} ({self.status})"
+
+
+class BillingHistory(models.Model):
+    """Maintains invoices and recurring billing logs for audit and compliance."""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='billing_invoices')
+    transaction = models.OneToOneField(PaymentTransaction, on_delete=models.CASCADE, related_name='invoice')
+    invoice_number = models.CharField(max_length=100, unique=True)
+    amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    invoice_pdf_url = models.URLField(blank=True, null=True)
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'billing_history'
+        ordering = ['-issued_at']
+
+    def __str__(self):
+        return f"Invoice {self.invoice_number} - {self.user.email}"
+
 
