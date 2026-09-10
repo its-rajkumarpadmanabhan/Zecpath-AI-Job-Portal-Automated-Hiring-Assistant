@@ -203,11 +203,11 @@ class AICallEngineTests(APITestCase):
         self.client.force_authenticate(user=self.recruiter)
 
         # GET detail
-        response = self.client.get(f'/api/aicalls/{ai_call.id}/')
+        response = self.client.get(f'/api/testing/ai-calls/{ai_call.id}/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # GET list
-        response = self.client.get('/api/aicalls/')
+        response = self.client.get('/api/testing/ai-calls/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Set call status to queued to test cancel
@@ -220,4 +220,82 @@ class AICallEngineTests(APITestCase):
 
         # POST retry
         response = self.client.post(f'/api/aicalls/{ai_call.id}/retry/', {"delay_minutes": 5}, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class LoadTestingAndBenchmarkTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="loadtest_user@example.com",
+            password="Password123!",
+            name="Load Test Admin",
+            role="admin"
+        )
+
+    def test_stress_test_ping_endpoint_public(self):
+        """Verify public health ping endpoint for Locust high concurrency load testing."""
+        response = self.client.get('/api/load-test/ping/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'healthy')
+        self.assertIn('server_time', response.data)
+        self.assertEqual(response.data.get('load_state'), 'normal')
+
+    def test_benchmark_report_endpoint_requires_auth(self):
+        """Verify benchmark report endpoint requires authentication."""
+        response = self.client.get('/api/load-test/benchmark-report/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_benchmark_report_endpoint_authenticated(self):
+        """Verify benchmark report returns query benchmarks and summary."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/load-test/benchmark-report/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'success')
+        self.assertIn('data', response.data)
+        data = response.data['data']
+        self.assertEqual(data.get('test_target'), 'AI Recruitment Pipeline & Analytics Endpoints')
+        self.assertIn('query_benchmark_results', data)
+        self.assertIn('stability_status', data)
+
+
+class SystemReadinessAndOverviewTests(APITestCase):
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            email="readiness_admin@example.com",
+            password="Password123!",
+            name="Readiness Admin",
+            role="admin"
+        )
+
+    def test_system_api_overview_public(self):
+        """Verify public API overview documentation endpoint."""
+        response = self.client.get('/api/system/api-overview/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'success')
+        self.assertIn('documentation', response.data)
+        docs = response.data['documentation']
+        self.assertEqual(docs.get('platform_name'), 'Zecpath AI Job Portal & Automated Hiring Assistant')
+        self.assertIn('core_modules', docs)
+        self.assertIn('auth_and_profiles', docs['core_modules'])
+        self.assertIn('ai_voice_screening', docs['core_modules'])
+
+    def test_system_readiness_check_requires_auth(self):
+        """Verify readiness check endpoint is protected."""
+        response = self.client.get('/api/system/readiness-check/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_system_readiness_check_authenticated(self):
+        """Verify authenticated readiness check returns comprehensive health & audit report."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get('/api/system/readiness-check/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'success')
+        self.assertIn('data', response.data)
+        data = response.data['data']
+        self.assertEqual(data.get('phase'), 'Phase Review & AI Backend Readiness (Day 45)')
+        self.assertIn('overall_status', data)
+        self.assertIn('architecture_validation', data)
+        self.assertIn('subsystem_health', data)
+        self.assertIn('readiness_signoff', data)
+
+

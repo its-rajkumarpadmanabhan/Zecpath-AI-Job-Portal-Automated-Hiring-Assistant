@@ -1806,3 +1806,52 @@ class StressTestTriggerAPIView(APIView):
             "load_state": "normal"
         }, status=status.HTTP_200_OK)
 
+
+# =============================================================================
+# 14. DAY 45: PHASE REVIEW & SYSTEM READINESS AUDIT
+# =============================================================================
+from core.utils.system_readiness import AIBackendReadinessValidator
+
+
+class AIBackendReadinessAPIView(APIView):
+    """
+    Endpoint: Returns production readiness audit, architecture verification,
+    and health status across the AI backend.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        report = AIBackendReadinessValidator.generate_full_readiness_report()
+        return Response({
+            "status": "success",
+            "message": "AI Backend readiness verification completed successfully.",
+            "data": report
+        }, status=status.HTTP_200_OK)
+
+
+class SystemOverviewDocumentationAPIView(APIView):
+    """
+    Endpoint: Provides structured API reference index and subsystem overview.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        documentation = {
+            "platform_name": "Zecpath AI Job Portal & Automated Hiring Assistant",
+            "phase_version": "v1.0-Production-Ready",
+            "core_modules": {
+                "auth_and_profiles": ["/api/auth/signup/", "/api/auth/login/", "/api/profile/candidate/", "/api/profile/employer/"],
+                "resume_and_ats": ["/api/candidate/resume/upload/", "/api/candidate/resume/extract-text/", "/api/jobs/<id>/match-score/"],
+                "ai_voice_screening": ["/api/voice/trigger-call/", "/api/voice/transcribe-audio/", "/api/voice/synthesize-speech/"],
+                "evaluation_and_reports": ["/api/testing/ai-questions/<id>/evaluate/", "/api/recruiter/applications/<id>/generate-report/"],
+                "interview_scheduling": ["/api/scheduling/slots/available/", "/api/scheduling/book/", "/api/scheduling/<id>/reschedule/"],
+                "funnel_analytics": ["/api/recruiter/analytics/funnel/", "/api/recruiter/analytics/jobs-performance/"],
+                "observability_and_security": ["/api/monitoring/audit-trails/", "/api/security/encrypt-sensitive-data/", "/api/security/report/"]
+            }
+        }
+        return Response({
+            "status": "success",
+            "documentation": documentation
+        }, status=status.HTTP_200_OK)
+
+

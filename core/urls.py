@@ -152,12 +152,18 @@ router.register(r'testing/call-logs', CallLogViewSet, basename='test-calllogs')
 urlpatterns += router.urls
 
 from .views import (
+    EmployerJobAICallsAPIView,
+    AICallRetryAPIView,
+    AICallCancelAPIView,
     AIVoiceTriggerCallAPIView,
     AIVoiceSynthesizeAPIView,
     AIVoiceTranscribeAPIView
 )
 
 urlpatterns += [
+    path('employer/jobs/<int:job_id>/ai-calls/', EmployerJobAICallsAPIView.as_view(), name='employer-job-ai-calls'),
+    path('aicalls/<int:pk>/retry/', AICallRetryAPIView.as_view(), name='aicall-retry'),
+    path('aicalls/<int:pk>/cancel/', AICallCancelAPIView.as_view(), name='aicall-cancel'),
     path('voice/trigger-call/', AIVoiceTriggerCallAPIView.as_view(), name='voice-trigger-call'),
     path('voice/synthesize-speech/', AIVoiceSynthesizeAPIView.as_view(), name='voice-synthesize-speech'),
     path('voice/transcribe-audio/', AIVoiceTranscribeAPIView.as_view(), name='voice-transcribe-audio'),
@@ -245,3 +251,15 @@ urlpatterns += [
     path('load-test/benchmark-report/', SystemLoadBenchmarkAPIView.as_view(), name='load-test-benchmark-report'),
     path('load-test/ping/', StressTestTriggerAPIView.as_view(), name='load-test-ping'),
 ]
+
+# Day 45: Phase Review & AI Backend Readiness Routes
+from .views import (
+    AIBackendReadinessAPIView,
+    SystemOverviewDocumentationAPIView,
+)
+
+urlpatterns += [
+    path('system/readiness-check/', AIBackendReadinessAPIView.as_view(), name='system-readiness-check'),
+    path('system/api-overview/', SystemOverviewDocumentationAPIView.as_view(), name='system-api-overview'),
+]
+
