@@ -256,3 +256,14 @@ AI_SERVICE_TIMEOUT_SECONDS = 15
 # ==============================================================================
 # Derives a 32-byte key from SECRET_KEY for Fernet symmetric encryption
 FIELD_ENCRYPTION_KEY = SECRET_KEY.encode()[:32]
+
+# ==============================================================================
+# DAY 47: PAYMENT GATEWAY CONFIGURATIONS (STRIPE & RAZORPAY)
+# ==============================================================================
+STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', 'pk_test_sample_key')
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_sample_key')
+STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_sample_secret')
+
+RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_sample_id')
+RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'rzp_test_sample_secret')
+RAZORPAY_WEBHOOK_SECRET = os.getenv('RAZORPAY_WEBHOOK_SECRET', 'sample_webhook_secret')

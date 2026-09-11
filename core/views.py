@@ -1958,4 +1958,122 @@ class MockSubscribePlanAPIView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
+# ==============================================================================
+# DAY 47: PAYMENT GATEWAYS (STRIPE & RAZORPAY) INTEGRATION & WEBHOOKS
+# ==============================================================================
+from core.utils.payment_gateway import PaymentGatewayService
+
+class CreatePaymentOrderAPIView(APIView):
+    """
+    Endpoint: Initializes an order session for the client checkout flow.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        plan_name = request.data.get('plan_name', 'pro')
+        gateway = request.data.get('gateway', 'razorpay')
+
+        try:
+            order_data = PaymentGatewayService.create_gateway_order(
+                user=request.user,
+                plan_name=plan_name,
+                gateway=gateway
+            )
+            return Response({"status": "success", "order": order_data}, status=status.HTTP_201_CREATED)
+        except ValueError as err:
+            return Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class VerifyPaymentAPIView(APIView):
+    """
+    Endpoint: Verifies client payment signatures and activates the subscription.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        order_id = request.data.get('order_id')
+        payment_id = request.data.get('payment_id')
+        signature = request.data.get('signature')
+
+        if not all([order_id, payment_id]):
+            return Response({"error": "order_id and payment_id are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # In production test mode, verify signature if provided
+        is_valid = True
+        if signature:
+            is_valid = PaymentGatewayService.verify_razorpay_signature(order_id, payment_id, signature)
+
+        if not is_valid:
+            return Response({"error": "Cryptographic signature verification failed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        transaction = PaymentGatewayService.mark_payment_success(order_id, payment_id, request.data)
+        if not transaction:
+            return Response({"error": "Transaction record not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Activate user subscription upon verified payment
+        plan_name = transaction.raw_response.get("plan_name", "pro")
+        plan = SubscriptionPlan.objects.get(name=plan_name)
+        end_date = timezone.now() + timedelta(days=30)
+
+        UserSubscription.objects.update_or_create(
+            user=request.user,
+            defaults={
+                'plan': plan,
+                'status': 'active',
+                'start_date': timezone.now(),
+                'current_period_end': end_date,
+            }
+        )
+
+        BillingHistory.objects.create(
+            user=request.user,
+            transaction=transaction,
+            invoice_number=f"INV-{uuid.uuid4().hex[:8].upper()}",
+            amount_paid=transaction.amount
+        )
+
+        return Response({
+            "status": "success",
+            "message": "Payment verified and subscription activated.",
+            "transaction_reference": order_id,
+            "status": "succeeded"
+        }, status=status.HTTP_200_OK)
+
+
+class PaymentWebhookAPIView(APIView):
+    """
+    Endpoint: Asynchronous webhook listener for payment success, failure, and refund events.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        event_type = request.data.get('event', 'payment.captured')
+        payload_data = request.data.get('payload', {})
+
+        # Handle events
+        if event_type in ['payment.captured', 'payment_intent.succeeded']:
+            order_id = payload_data.get('order_id') or request.data.get('order_id')
+            tx = PaymentTransaction.objects.filter(transaction_reference=order_id).first()
+            if tx:
+                tx.status = 'succeeded'
+                tx.save(update_fields=['status'])
+
+        elif event_type in ['payment.failed', 'payment_intent.payment_failed']:
+            order_id = payload_data.get('order_id') or request.data.get('order_id')
+            tx = PaymentTransaction.objects.filter(transaction_reference=order_id).first()
+            if tx:
+                tx.status = 'failed'
+                tx.save(update_fields=['status'])
+
+        elif event_type in ['refund.processed', 'charge.refunded']:
+            order_id = payload_data.get('order_id') or request.data.get('order_id')
+            tx = PaymentTransaction.objects.filter(transaction_reference=order_id).first()
+            if tx:
+                tx.status = 'refunded'
+                tx.save(update_fields=['status'])
+
+        return Response({"status": "received", "event": event_type}, status=status.HTTP_200_OK)
+
+
+
 

@@ -353,4 +353,149 @@ class SaaSMonetizationAndSubscriptionTests(APITestCase):
         self.assertTrue(sub_resp.data['subscription']['valid'])
 
 
+class PaymentGatewayAndWebhookTests(APITestCase):
+    def setUp(self):
+        import hmac
+        import hashlib
+        from django.conf import settings
+        from core.models import SubscriptionPlan, UserSubscription, PaymentTransaction, BillingHistory
+
+        self.plan, _ = SubscriptionPlan.objects.get_or_create(
+            name='pro',
+            defaults={'display_title': 'Pro Recruiter', 'price': 49.00, 'is_active': True}
+        )
+        self.user = User.objects.create_user(
+            email="payment_user@example.com",
+            password="Password123!",
+            name="Payment Test User",
+            role="employer"
+        )
+
+    def test_create_payment_order_razorpay(self):
+        """Verify creating Razorpay payment order."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post('/api/payments/create-order/', {
+            'plan_name': 'pro',
+            'gateway': 'razorpay'
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['status'], 'success')
+        order = response.data['order']
+        self.assertEqual(order['gateway'], 'razorpay')
+        self.assertEqual(order['currency'], 'INR')
+        self.assertEqual(order['plan_name'], 'pro')
+        self.assertTrue(order['order_id'].startswith('ORD_'))
+
+    def test_create_payment_order_stripe(self):
+        """Verify creating Stripe payment order."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post('/api/payments/create-order/', {
+            'plan_name': 'pro',
+            'gateway': 'stripe'
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        order = response.data['order']
+        self.assertEqual(order['gateway'], 'stripe')
+        self.assertEqual(order['currency'], 'USD')
+
+    def test_verify_payment_success_with_signature(self):
+        """Verify cryptographic HMAC signature check and subscription activation."""
+        import hmac
+        import hashlib
+        from django.conf import settings
+        from core.models import PaymentTransaction, UserSubscription, BillingHistory
+
+        self.client.force_authenticate(user=self.user)
+        # 1. Create order
+        create_resp = self.client.post('/api/payments/create-order/', {
+            'plan_name': 'pro',
+            'gateway': 'razorpay'
+        }, format='json')
+        order_id = create_resp.data['order']['order_id']
+        payment_id = 'pay_test_123456'
+
+        # 2. Compute valid signature
+        secret = settings.RAZORPAY_KEY_SECRET.encode('utf-8')
+        msg = f"{order_id}|{payment_id}".encode('utf-8')
+        valid_sig = hmac.new(secret, msg, hashlib.sha256).hexdigest()
+
+        # 3. Verify payment
+        verify_resp = self.client.post('/api/payments/verify/', {
+            'order_id': order_id,
+            'payment_id': payment_id,
+            'signature': valid_sig
+        }, format='json')
+
+        self.assertEqual(verify_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(verify_resp.data['status'], 'succeeded')
+
+        # Check transaction and subscription updated
+        tx = PaymentTransaction.objects.get(transaction_reference=order_id)
+        self.assertEqual(tx.status, 'succeeded')
+
+        sub = UserSubscription.objects.get(user=self.user)
+        self.assertEqual(sub.status, 'active')
+        self.assertEqual(sub.plan.name, 'pro')
+
+        invoice = BillingHistory.objects.filter(transaction=tx).first()
+        self.assertIsNotNone(invoice)
+
+    def test_verify_payment_invalid_signature(self):
+        """Verify payment rejection on invalid HMAC signature."""
+        self.client.force_authenticate(user=self.user)
+        create_resp = self.client.post('/api/payments/create-order/', {'plan_name': 'pro'}, format='json')
+        order_id = create_resp.data['order']['order_id']
+
+        verify_resp = self.client.post('/api/payments/verify/', {
+            'order_id': order_id,
+            'payment_id': 'pay_invalid',
+            'signature': 'invalid_signature_hash'
+        }, format='json')
+
+        self.assertEqual(verify_resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Cryptographic signature verification failed", verify_resp.data['error'])
+
+    def test_payment_webhook_events(self):
+        """Verify handling of asynchronous payment webhook events."""
+        from core.models import PaymentTransaction
+        tx = PaymentTransaction.objects.create(
+            user=self.user,
+            amount=49.00,
+            currency="INR",
+            payment_method="razorpay",
+            transaction_reference="ORD_WEBHOOK_TEST_1",
+            status="pending"
+        )
+
+        # 1. Captured / Succeeded
+        resp = self.client.post('/api/payments/webhook/', {
+            'event': 'payment.captured',
+            'payload': {'order_id': 'ORD_WEBHOOK_TEST_1'}
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        tx.refresh_from_db()
+        self.assertEqual(tx.status, 'succeeded')
+
+        # 2. Failed
+        resp = self.client.post('/api/payments/webhook/', {
+            'event': 'payment.failed',
+            'payload': {'order_id': 'ORD_WEBHOOK_TEST_1'}
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        tx.refresh_from_db()
+        self.assertEqual(tx.status, 'failed')
+
+        # 3. Refunded
+        resp = self.client.post('/api/payments/webhook/', {
+            'event': 'refund.processed',
+            'payload': {'order_id': 'ORD_WEBHOOK_TEST_1'}
+        }, format='json')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        tx.refresh_from_db()
+        self.assertEqual(tx.status, 'refunded')
+
+
+
 

@@ -276,4 +276,18 @@ urlpatterns += [
     path('billing/subscribe/', MockSubscribePlanAPIView.as_view(), name='billing-subscribe'),
 ]
 
+# Day 47: Payment Gateways (Stripe & Razorpay) Routes
+from .views import (
+    CreatePaymentOrderAPIView,
+    VerifyPaymentAPIView,
+    PaymentWebhookAPIView,
+)
+
+urlpatterns += [
+    path('payments/create-order/', CreatePaymentOrderAPIView.as_view(), name='payment-create-order'),
+    path('payments/verify/', VerifyPaymentAPIView.as_view(), name='payment-verify'),
+    path('payments/webhook/', PaymentWebhookAPIView.as_view(), name='payment-webhook'),
+]
+
+
 
