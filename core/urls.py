@@ -300,6 +300,18 @@ urlpatterns += [
     path('features/candidate-access/', GatedCandidateAccessAPIView.as_view(), name='features-candidate-access'),
 ]
 
+# Day 49: Premium Recruiter Insights & Candidate Ranking Routes
+from .views import (
+    PremiumCandidateRankingReportAPIView,
+    PremiumHiringEfficiencyAPIView,
+)
+
+urlpatterns += [
+    path('recruiter/premium/jobs/<int:job_id>/ranking-report/', PremiumCandidateRankingReportAPIView.as_view(), name='recruiter-premium-ranking-report'),
+    path('recruiter/premium/hiring-efficiency/', PremiumHiringEfficiencyAPIView.as_view(), name='recruiter-premium-hiring-efficiency'),
+]
+
+
 
 
 

@@ -724,6 +724,133 @@ class FeatureAccessAndGatingTests(APITestCase):
         self.assertEqual(resp.status_code, 200)
 
 
+class PremiumRecruiterInsightsTests(APITestCase):
+    """Day 49: Tests for Candidate Ranking, Success Predictions, Hiring Efficiency, and Tier Permissions."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.recruiter = User.objects.create_user(
+            email='recruiter_pro@example.com',
+            password='Password123!',
+            name='Recruiter Pro',
+            role='recruiter'
+        )
+        self.candidate1 = User.objects.create_user(
+            email='cand1@example.com',
+            password='Password123!',
+            name='Candidate Alice',
+            role='candidate'
+        )
+        self.candidate2 = User.objects.create_user(
+            email='cand2@example.com',
+            password='Password123!',
+            name='Candidate Bob',
+            role='candidate'
+        )
+
+        from django.utils import timezone
+        from datetime import timedelta
+        self.pro_plan = SubscriptionPlan.objects.create(
+            name='pro',
+            display_title='Pro Recruiter Plan',
+            price=49.00,
+            has_advanced_analytics=True,
+            is_active=True
+        )
+        self.free_plan = SubscriptionPlan.objects.create(
+            name='free',
+            display_title='Free Tier',
+            price=0.00,
+            has_advanced_analytics=False,
+            is_active=True
+        )
+
+        self.sub = UserSubscription.objects.create(
+            user=self.recruiter,
+            plan=self.pro_plan,
+            status='active',
+            current_period_end=timezone.now() + timedelta(days=30)
+        )
+
+        self.job = Job.objects.create(
+            employer=self.recruiter,
+            title='Staff AI Engineer',
+            company='Zecpath AI',
+            skills_required='Python, PyTorch, Transformers',
+            status='active'
+        )
+
+        self.app1 = Application.objects.create(
+            candidate=self.candidate1,
+            job=self.job,
+            ats_score=90.0,
+            status='selected'
+        )
+        self.app2 = Application.objects.create(
+            candidate=self.candidate2,
+            job=self.job,
+            ats_score=65.0,
+            status='applied'
+        )
+
+    def test_ranking_report_and_prediction(self):
+        """Verify candidate ranking calculation and descending ordering."""
+        from core.utils.premium_insights import PremiumInsightsService
+
+        report = PremiumInsightsService.get_candidate_ranking_report(self.job.id, self.recruiter)
+        self.assertNotIn("error", report)
+        self.assertEqual(report["total_evaluated_candidates"], 2)
+
+        rankings = report["rankings"]
+        self.assertGreaterEqual(rankings[0]["composite_rank_score"], rankings[1]["composite_rank_score"])
+        self.assertEqual(rankings[0]["candidate_name"], "Candidate Alice")
+        self.assertEqual(rankings[0]["success_prediction"], "High Probability Hire")
+
+    def test_hiring_efficiency_metrics(self):
+        """Verify recruiter hiring velocity & efficiency ratio calculations."""
+        from core.utils.premium_insights import PremiumInsightsService
+
+        metrics = PremiumInsightsService.get_hiring_efficiency_metrics(self.recruiter)
+        data = metrics["recruiter_metrics"]
+
+        self.assertEqual(data["active_job_campaigns"], 1)
+        self.assertEqual(data["total_candidate_pipeline"], 2)
+        self.assertEqual(data["successful_hires"], 1)
+        self.assertEqual(data["hiring_conversion_efficiency_pct"], 50.0)
+        self.assertEqual(data["estimated_hours_saved_by_ai"], 3.0)
+
+    def test_premium_endpoints_with_pro_user(self):
+        """Verify successful API responses for Pro recruiter."""
+        self.client.force_authenticate(user=self.recruiter)
+
+        # 1. Ranking Report API
+        resp = self.client.get(f'/api/recruiter/premium/jobs/{self.job.id}/ranking-report/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["status"], "success")
+        self.assertEqual(resp.data["data"]["job_title"], "Staff AI Engineer")
+
+        # 2. Hiring Efficiency API
+        resp = self.client.get('/api/recruiter/premium/hiring-efficiency/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data["status"], "success")
+        self.assertIn("recruiter_metrics", resp.data["data"])
+
+    def test_permission_denied_for_candidate_and_free_plan(self):
+        """Verify 403 Forbidden for candidates and free-tier recruiters."""
+        # Candidate attempt
+        self.client.force_authenticate(user=self.candidate1)
+        resp = self.client.get('/api/recruiter/premium/hiring-efficiency/')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Free tier recruiter attempt
+        self.sub.plan = self.free_plan
+        self.sub.save()
+        self.client.force_authenticate(user=self.recruiter)
+        resp = self.client.get('/api/recruiter/premium/hiring-efficiency/')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+
+
 
 
 

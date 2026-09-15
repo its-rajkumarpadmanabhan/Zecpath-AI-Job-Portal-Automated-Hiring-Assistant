@@ -75,4 +75,46 @@ class RequiresTier(BasePermission):
 class RequiresProOrEnterpriseTier(RequiresTier):
     """Gates access to advanced recruiter analytics and high-volume tools."""
     required_tiers = ['pro', 'enterprise']
-    message = "This endpoint requires an active Pro or Enterprise subscription."
+    message = "This endpoint requires an active Pro or Enterprise subscription."
+
+
+# ==============================================================================
+# DAY 49: PREMIUM RECRUITER INSIGHTS PERMISSIONS & THROTTLING
+# ==============================================================================
+from rest_framework.throttling import SimpleRateThrottle
+
+class IsRecruiterWithPaidPlan(BasePermission):
+    """Requires the caller to be an employer/recruiter with an active Pro or Enterprise plan."""
+    message = "Access restricted: Requires a Recruiter account with an active Pro or Enterprise plan."
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        # Admin bypass
+        if getattr(request.user, 'role', '') == 'admin' or request.user.is_staff or getattr(request.user, 'is_superuser', False):
+            return True
+
+        # Validate Recruiter / Employer role
+        user_role = str(getattr(request.user, 'role', '')).lower()
+        if user_role not in ['employer', 'recruiter']:
+            return False
+
+        # Validate Active Subscription & Tier Entitlements
+        sub = getattr(request.user, 'subscription', None)
+        if not sub or not sub.is_access_allowed:
+            return False
+
+        return sub.plan.name in ['pro', 'enterprise']
+
+
+class PremiumInsightsRateThrottle(SimpleRateThrottle):
+    """Prevents quota abuse and scraping on high-overhead premium insights."""
+    scope = 'premium_insights'
+    rate = '15/minute'
+
+    def get_cache_key(self, request, view):
+        if request.user.is_authenticated:
+            return f"throttle_premium_user_{request.user.id}"
+        return self.get_ident(request)
+

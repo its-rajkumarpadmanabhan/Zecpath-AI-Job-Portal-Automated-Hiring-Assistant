@@ -2150,6 +2150,57 @@ class GatedCandidateAccessAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 49: PREMIUM RECRUITER INSIGHTS & CANDIDATE RANKING APIS
+# ==============================================================================
+from core.permissions import IsRecruiterWithPaidPlan, PremiumInsightsRateThrottle
+from core.utils.premium_insights import PremiumInsightsService
+
+class PremiumCandidateRankingReportAPIView(APIView):
+    """
+    Endpoint: Generates advanced candidate rankings and success predictions per job.
+    """
+    permission_classes = [IsRecruiterWithPaidPlan]
+    throttle_classes = [PremiumInsightsRateThrottle]
+
+    def get(self, request, job_id):
+        report = PremiumInsightsService.get_candidate_ranking_report(
+            job_id=job_id,
+            employer_user=request.user
+        )
+        if "error" in report:
+            return Response({"error": report["error"]}, status=status.HTTP_404_NOT_FOUND)
+
+        tier_title = getattr(getattr(request.user, 'subscription', None), 'plan', None)
+        tier_name = tier_title.display_title if tier_title else "Pro Plan"
+
+        return Response({
+            "status": "success",
+            "tier": tier_name,
+            "data": report
+        }, status=status.HTTP_200_OK)
+
+
+class PremiumHiringEfficiencyAPIView(APIView):
+    """
+    Endpoint: Returns hiring velocity, aggregate quality, and AI-driven efficiency metrics.
+    """
+    permission_classes = [IsRecruiterWithPaidPlan]
+    throttle_classes = [PremiumInsightsRateThrottle]
+
+    def get(self, request):
+        metrics = PremiumInsightsService.get_hiring_efficiency_metrics(request.user)
+        tier_title = getattr(getattr(request.user, 'subscription', None), 'plan', None)
+        tier_name = tier_title.display_title if tier_title else "Pro Plan"
+
+        return Response({
+            "status": "success",
+            "tier": tier_name,
+            "data": metrics
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 
