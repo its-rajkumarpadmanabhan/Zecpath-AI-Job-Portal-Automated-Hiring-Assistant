@@ -289,5 +289,17 @@ urlpatterns += [
     path('payments/webhook/', PaymentWebhookAPIView.as_view(), name='payment-webhook'),
 ]
 
+# Day 48: Feature Access Control & Subscription Validation Routes
+from .views import (
+    SubscriptionValidationAPIView,
+    GatedCandidateAccessAPIView,
+)
+
+urlpatterns += [
+    path('billing/validate-access/', SubscriptionValidationAPIView.as_view(), name='billing-validate-access'),
+    path('features/candidate-access/', GatedCandidateAccessAPIView.as_view(), name='features-candidate-access'),
+]
+
+
 
 

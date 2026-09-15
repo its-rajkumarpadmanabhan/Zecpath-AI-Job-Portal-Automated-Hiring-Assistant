@@ -2075,5 +2075,81 @@ class PaymentWebhookAPIView(APIView):
         return Response({"status": "received", "event": event_type}, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 48: FEATURE ACCESS CONTROL & SUBSCRIPTION VALIDATION APIS
+# ==============================================================================
+from core.utils.feature_access import FeatureAccessController
+
+class SubscriptionValidationAPIView(APIView):
+    """
+    Endpoint: Checks real-time subscription status, grace period state, and remaining quotas.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        sub = UserSubscription.objects.filter(user=request.user).select_related('plan').first()
+        if not sub:
+            return Response({
+                "status": "unsubscribed",
+                "can_access_paid_features": False,
+                "message": "No active plan found. Basic free limits apply."
+            }, status=status.HTTP_200_OK)
+
+        current_status = sub.check_and_update_expiry()
+        active_jobs_count = Job.objects.filter(employer=request.user, status='active').count()
+
+        return Response({
+            "status": "success",
+            "subscription": {
+                "tier": sub.plan.name,
+                "plan_title": sub.plan.display_title,
+                "status": current_status,
+                "is_access_allowed": sub.is_access_allowed,
+                "current_period_end": sub.current_period_end.isoformat(),
+                "grace_period_days": sub.grace_period_days
+            },
+            "usage_limits": {
+                "active_jobs": {
+                    "used": active_jobs_count,
+                    "max_limit": "Unlimited" if sub.plan.max_active_jobs == -1 else sub.plan.max_active_jobs,
+                    "limit_reached": active_jobs_count >= sub.plan.max_active_jobs if sub.plan.max_active_jobs != -1 else False
+                },
+                "candidate_views": {
+                    "used": sub.monthly_candidate_views_used,
+                    "limit": "Unlimited" if sub.plan.name in ['pro', 'enterprise'] else 10
+                },
+                "has_advanced_analytics": sub.plan.has_advanced_analytics
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class GatedCandidateAccessAPIView(APIView):
+    """
+    Endpoint: Demonstrates usage limit gating when viewing candidate records.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        allowed, reason = FeatureAccessController.can_view_candidate_profile(request.user)
+        if not allowed:
+            return Response({
+                "status": "forbidden",
+                "error": "Access Limit Exceeded",
+                "detail": reason
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        return Response({
+            "status": "success",
+            "message": "Candidate profile details unlocked.",
+            "candidate": {
+                "id": 101,
+                "name": "Jane Doe",
+                "title": "Senior AI Backend Engineer",
+                "match_score": 94.5
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
 
 

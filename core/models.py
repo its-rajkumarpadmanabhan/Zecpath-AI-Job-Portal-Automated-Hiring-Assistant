@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import timedelta
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
@@ -627,6 +628,11 @@ class UserSubscription(models.Model):
     start_date = models.DateTimeField(default=timezone.now)
     current_period_end = models.DateTimeField()
     cancel_at_period_end = models.BooleanField(default=False)
+    grace_period_days = models.IntegerField(default=3)
+    monthly_job_posts_used = models.IntegerField(default=0)
+    monthly_ai_screenings_used = models.IntegerField(default=0)
+    monthly_candidate_views_used = models.IntegerField(default=0)
+    last_usage_reset = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -636,9 +642,27 @@ class UserSubscription(models.Model):
     def __str__(self):
         return f"{self.user.email} - {self.plan.name} ({self.status})"
 
+    def check_and_update_expiry(self):
+        """Automatically checks subscription status, grace period, and deactivates expired plans."""
+        now = timezone.now()
+        if self.status == 'active' and now > self.current_period_end:
+            grace_deadline = self.current_period_end + timedelta(days=self.grace_period_days)
+            if now <= grace_deadline:
+                self.status = 'past_due'  # In grace period
+            else:
+                self.status = 'expired'   # Deactivated
+            self.save(update_fields=['status'])
+        return self.status
+
+    @property
+    def is_access_allowed(self):
+        """Allows access if plan is active or in grace period."""
+        status = self.check_and_update_expiry()
+        return status in ['active', 'past_due']
+
     @property
     def is_valid(self):
-        return self.status == 'active' and self.current_period_end >= timezone.now()
+        return self.is_access_allowed
 
 
 class PaymentTransaction(models.Model):

@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient, APITestCase
 from rest_framework import status
-from core.models import User, Candidate, Employer, Job, Application
+from core.models import User, Candidate, Employer, Job, Application, SubscriptionPlan, UserSubscription, PaymentTransaction
 
 
 class AuthenticationAndJobTests(TestCase):
@@ -495,6 +495,234 @@ class PaymentGatewayAndWebhookTests(APITestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         tx.refresh_from_db()
         self.assertEqual(tx.status, 'refunded')
+
+
+class FeatureAccessAndGatingTests(APITestCase):
+    """Day 48: Tests for Feature Access Control, Usage Limits, Expiry, and Middleware."""
+
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            email='subscriber@example.com',
+            password='Password123!',
+            name='Subscriber Recruiter',
+            role='recruiter'
+        )
+        self.free_plan = SubscriptionPlan.objects.create(
+            name='free',
+            display_title='Free Plan',
+            price=0.00,
+            max_active_jobs=2,
+            has_advanced_analytics=False,
+            is_active=True
+        )
+        self.pro_plan = SubscriptionPlan.objects.create(
+            name='pro',
+            display_title='Pro Plan',
+            price=49.00,
+            max_active_jobs=10,
+            has_advanced_analytics=True,
+            is_active=True
+        )
+        self.enterprise_plan = SubscriptionPlan.objects.create(
+            name='enterprise',
+            display_title='Enterprise Plan',
+            price=199.00,
+            max_active_jobs=-1,
+            has_advanced_analytics=True,
+            is_active=True
+        )
+
+    def test_expiry_and_grace_period_logic(self):
+        """Test automatic transition from active -> past_due (grace period) -> expired."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import UserSubscription
+
+        sub = UserSubscription.objects.create(
+            user=self.user,
+            plan=self.pro_plan,
+            status='active',
+            start_date=timezone.now() - timedelta(days=35),
+            current_period_end=timezone.now() - timedelta(days=1),
+            grace_period_days=3
+        )
+
+        # In grace period (expired 1 day ago <= 3 days grace)
+        status_result = sub.check_and_update_expiry()
+        self.assertEqual(status_result, 'past_due')
+        self.assertTrue(sub.is_access_allowed)
+
+        # Beyond grace period (expired 5 days ago > 3 days grace)
+        sub.status = 'active'
+        sub.current_period_end = timezone.now() - timedelta(days=5)
+        sub.save()
+        status_result = sub.check_and_update_expiry()
+        self.assertEqual(status_result, 'expired')
+        self.assertFalse(sub.is_access_allowed)
+
+    def test_feature_access_controller_job_posting_limits(self):
+        """Test active job posting quota enforcement by tier."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import UserSubscription, Job
+        from core.utils.feature_access import FeatureAccessController
+
+        # 1. No subscription
+        can_post, msg = FeatureAccessController.can_post_job(self.user)
+        self.assertFalse(can_post)
+        self.assertIn("Active subscription required", msg)
+
+        # 2. Free subscription (max 2 jobs)
+        sub = UserSubscription.objects.create(
+            user=self.user,
+            plan=self.free_plan,
+            status='active',
+            current_period_end=timezone.now() + timedelta(days=30)
+        )
+        can_post, msg = FeatureAccessController.can_post_job(self.user)
+        self.assertTrue(can_post)
+
+        # Create 2 active jobs
+        Job.objects.create(employer=self.user, title='Job 1', company='Tech', status='active')
+        Job.objects.create(employer=self.user, title='Job 2', company='Tech', status='active')
+
+        can_post, msg = FeatureAccessController.can_post_job(self.user)
+        self.assertFalse(can_post)
+        self.assertIn("Job posting limit reached", msg)
+
+        # 3. Upgrade to Enterprise (unlimited)
+        sub.plan = self.enterprise_plan
+        sub.save()
+        can_post, msg = FeatureAccessController.can_post_job(self.user)
+        self.assertTrue(can_post)
+        self.assertIn("Unlimited", msg)
+
+    def test_feature_access_controller_candidate_views(self):
+        """Test candidate profile view quota on free and paid tiers."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import UserSubscription
+        from core.utils.feature_access import FeatureAccessController
+
+        sub = UserSubscription.objects.create(
+            user=self.user,
+            plan=self.free_plan,
+            status='active',
+            monthly_candidate_views_used=9,
+            current_period_end=timezone.now() + timedelta(days=30)
+        )
+
+        # 10th view should be granted
+        allowed, msg = FeatureAccessController.can_view_candidate_profile(self.user)
+        self.assertTrue(allowed)
+        sub.refresh_from_db()
+        self.assertEqual(sub.monthly_candidate_views_used, 10)
+
+        # 11th view on free tier should be denied
+        allowed, msg = FeatureAccessController.can_view_candidate_profile(self.user)
+        self.assertFalse(allowed)
+        self.assertIn("limit of 10 reached", msg)
+
+        # Switch to Pro (unlimited)
+        sub.plan = self.pro_plan
+        sub.save()
+        allowed, msg = FeatureAccessController.can_view_candidate_profile(self.user)
+        self.assertTrue(allowed)
+
+    def test_subscription_validation_api(self):
+        """Test GET /api/billing/validate-access/ endpoint."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import UserSubscription
+
+        self.client.force_authenticate(user=self.user)
+
+        # 1. Unsubscribed
+        resp = self.client.get('/api/billing/validate-access/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['status'], 'unsubscribed')
+
+        # 2. Subscribed to Pro
+        UserSubscription.objects.create(
+            user=self.user,
+            plan=self.pro_plan,
+            status='active',
+            current_period_end=timezone.now() + timedelta(days=30)
+        )
+        resp = self.client.get('/api/billing/validate-access/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(resp.data['status'], 'success')
+        self.assertEqual(resp.data['subscription']['tier'], 'pro')
+        self.assertTrue(resp.data['subscription']['is_access_allowed'])
+
+    def test_gated_candidate_access_api(self):
+        """Test GET /api/features/candidate-access/ endpoint."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import UserSubscription
+
+        self.client.force_authenticate(user=self.user)
+
+        # 1. Without subscription -> 403
+        resp = self.client.get('/api/features/candidate-access/')
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+
+        # 2. With subscription -> 200
+        UserSubscription.objects.create(
+            user=self.user,
+            plan=self.pro_plan,
+            status='active',
+            current_period_end=timezone.now() + timedelta(days=30)
+        )
+        resp = self.client.get('/api/features/candidate-access/')
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn('candidate', resp.data)
+        self.assertEqual(resp.data['candidate']['name'], 'Jane Doe')
+
+    def test_paid_feature_access_middleware(self):
+        """Test middleware gating on /api/recruiter/analytics/."""
+        from django.utils import timezone
+        from datetime import timedelta
+        from core.models import UserSubscription
+
+        # 1. Unauthenticated -> 401
+        resp = self.client.get('/api/recruiter/analytics/funnel/')
+        self.assertEqual(resp.status_code, 401)
+
+        # 2. Authenticated but no subscription -> 403
+        self.client.force_authenticate(user=self.user)
+        resp = self.client.get('/api/recruiter/analytics/funnel/')
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['error'], 'Subscription Required')
+
+        # 3. Free plan without advanced analytics -> 403 Upgrade Required
+        sub = UserSubscription.objects.create(
+            user=self.user,
+            plan=self.free_plan,
+            status='active',
+            current_period_end=timezone.now() + timedelta(days=30)
+        )
+        resp = self.client.get('/api/recruiter/analytics/funnel/')
+        self.assertEqual(resp.status_code, 403)
+        self.assertEqual(resp.json()['error'], 'Upgrade Required')
+
+        # 4. Pro plan with advanced analytics -> 200
+        sub.plan = self.pro_plan
+        sub.save()
+        resp = self.client.get('/api/recruiter/analytics/funnel/')
+        self.assertEqual(resp.status_code, 200)
+
+        # 5. Admin user bypass
+        admin_user = User.objects.create_superuser(
+            email='admin_sub@example.com',
+            password='Password123!',
+            name='Admin User'
+        )
+        self.client.force_authenticate(user=admin_user)
+        resp = self.client.get('/api/recruiter/analytics/funnel/')
+        self.assertEqual(resp.status_code, 200)
+
 
 
 
