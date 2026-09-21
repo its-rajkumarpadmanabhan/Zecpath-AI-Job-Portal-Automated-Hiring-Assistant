@@ -64,25 +64,32 @@ Nginx server configuration is placed at `/etc/nginx/sites-available/zecpath`:
 ```nginx
 server {
     listen 80;
-    server_name api.zecpath.com 127.0.0.1;
+    server_name _;
 
     client_max_body_size 25M;
 
+    # Static assets directory
     location /static/ {
         alias /home/ubuntu/zecpath-backend/staticfiles/;
     }
 
+    # Media uploads directory
     location /media/ {
         alias /home/ubuntu/zecpath-backend/media/;
     }
 
+    # Pass all other requests to Gunicorn socket
     location / {
         include proxy_params;
         proxy_pass http://unix:/home/ubuntu/zecpath-backend/zecpath.sock;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
+
 
 ### Linking & Testing
 ```bash
