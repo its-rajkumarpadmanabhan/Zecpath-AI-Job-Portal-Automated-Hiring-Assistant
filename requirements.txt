@@ -14,3 +14,4 @@ stripe>=8.0.0
 razorpay>=1.4.0
 gunicorn>=22.0.0
 psycopg2-binary>=2.9.9
+python-decouple>=3.8
