@@ -1,14 +1,18 @@
-*.pyc
-__pycache__/
-db.sqlite3
-day3_env/
-.vscode/
-
-# Secrets & Environment Configurations
+# Environment and Secrets
 .env
 .env.*
 !.env.example
+
+# Python cache & artifacts
+__pycache__/
+*.py[cod]
+venv/
+day3_env/
+*.sqlite3
+.vscode/
+
+# Logs & sockets
+*.log
 *.sock
 staticfiles/
 media/
-*.log

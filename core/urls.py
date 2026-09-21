@@ -324,6 +324,14 @@ urlpatterns += [
     path('admin/finance/transactions/<int:transaction_id>/refund/', AdminRefundTriggerAPIView.as_view(), name='admin-finance-refund'),
 ]
 
+# Day 52: DevOps Environment Config Audit Routes
+from .views import EnvironmentConfigAuditAPIView
+
+urlpatterns += [
+    path('devops/config-audit/', EnvironmentConfigAuditAPIView.as_view(), name='devops-config-audit'),
+]
+
+
 
 
 

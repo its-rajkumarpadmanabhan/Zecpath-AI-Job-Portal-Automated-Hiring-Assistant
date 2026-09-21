@@ -2268,6 +2268,30 @@ class AdminRefundTriggerAPIView(APIView):
             return Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# ==============================================================================
+# DAY 52: DEVOPS ENVIRONMENT CONFIG AUDIT API
+# ==============================================================================
+class EnvironmentConfigAuditAPIView(APIView):
+    """
+    DevOps audit endpoint to verify environment variable states and secret presence without leaking values.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def get(self, request):
+        return Response({
+            "status": "success",
+            "environment_audit": {
+                "debug_mode": settings.DEBUG,
+                "database_configured": bool(settings.DATABASES['default']['NAME']),
+                "stripe_configured": bool(getattr(settings, 'STRIPE_SECRET_KEY', None)),
+                "razorpay_configured": bool(getattr(settings, 'RAZORPAY_KEY_SECRET', None)),
+                "fernet_encryption_configured": bool(getattr(settings, 'FERNET_ENCRYPTION_KEY', None)),
+                "allowed_hosts_count": len(settings.ALLOWED_HOSTS)
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 

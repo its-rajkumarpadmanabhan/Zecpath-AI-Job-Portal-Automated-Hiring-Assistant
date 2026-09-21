@@ -12,31 +12,26 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
-from datetime import timedelta
+from decouple import config, Csv
 
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-}
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Core Security
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key')
+DEBUG = config('DEBUG', default=False, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost,api.zecpath.com', cast=Csv())
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure--06r2=&q3z!r5xp!lcr&1wi@289n3xb647b3*5fn9z19b94)!l'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*']
-
+# Database Credentials
+DATABASES = {
+    'default': {
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
+        'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
+        'USER': config('DB_USER', default=''),
+        'PASSWORD': config('DB_PASSWORD', default=''),
+        'HOST': config('DB_HOST', default=''),
+        'PORT': config('DB_PORT', default=''),
+    }
+}
 
 # Application definition
 
@@ -52,24 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework_simplejwt.token_blacklist',
     'core',
-    
 ]
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,  # 10 jobs per page
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day',
-        'premium_insights': '15/minute',
-    },
-}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
@@ -78,8 +56,6 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
-
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -111,18 +87,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'zecpath_backend.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -141,7 +105,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
@@ -153,19 +116,16 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-
 AUTH_USER_MODEL = "core.User"
-
-
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -192,6 +152,7 @@ REST_FRAMEWORK = {
         'user': '120/minute',          # Authenticated users rate limit
         'ai_abuse': '5/minute',        # Strict throttle for expensive AI endpoints
         'auth_strict': '5/minute',     # Strict throttle for login / sensitive attempts
+        'premium_insights': '15/minute',
     },
 }
 
@@ -200,17 +161,16 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'Zecpath Automated Assistant <no-reply@zecpath.com>'
 
 # Celery Configuration (Redis Broker & Result Backend)
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_BROKER_URL = config('REDIS_URL', default=config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0'))
+CELERY_RESULT_BACKEND = config('REDIS_URL', default=config('CELERY_RESULT_BACKEND', default='redis://127.0.0.1:6379/0'))
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
 # Eager execution fallback for dev environments where Redis broker is offline
-CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'True').lower() in ('true', '1')
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=True, cast=bool)
 CELERY_TASK_EAGER_PROPAGATES = True
-
 
 # Celery Beat Periodic Tasks Schedule (Cron Jobs)
 from celery.schedules import crontab
@@ -226,44 +186,28 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-
 # ==============================================================================
 # DAY 35: VOICE & AI INTEGRATION SETTINGS
 # ==============================================================================
-import os
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-VOICE_SERVICE_PROVIDER = os.getenv('VOICE_SERVICE_PROVIDER', 'mock')  # 'mock', 'twilio', 'deepgram'
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+VOICE_SERVICE_PROVIDER = config('VOICE_SERVICE_PROVIDER', default='mock')  # 'mock', 'twilio', 'deepgram'
 DEFAULT_VOICE_LANGUAGE = 'en-US'
 DEFAULT_VOICE_GENDER = 'female'  # 'male', 'female', 'neutral'
-VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'  # Or TTS voice profile
+VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'
 AI_SERVICE_MAX_RETRIES = 3
 AI_SERVICE_TIMEOUT_SECONDS = 15
 
 # ==============================================================================
-# DAY 35: VOICE & AI INTEGRATION SETTINGS
+# DAY 43 & 52: CRYPTOGRAPHY & PAYMENT GATEWAY SETTINGS
 # ==============================================================================
-import os
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
-VOICE_SERVICE_PROVIDER = os.getenv('VOICE_SERVICE_PROVIDER', 'mock')  # 'mock', 'twilio', 'deepgram'
-DEFAULT_VOICE_LANGUAGE = 'en-US'
-DEFAULT_VOICE_GENDER = 'female'  # 'male', 'female', 'neutral'
-VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'  # Or TTS voice profile
-AI_SERVICE_MAX_RETRIES = 3
-AI_SERVICE_TIMEOUT_SECONDS = 15
+# Payment Secrets
+STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY', default='')
+STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
+RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
+RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='')
+RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 
-# ==============================================================================
-# DAY 43: FIELD ENCRYPTION KEY FOR SENSITIVE DATA
-# ==============================================================================
-# Derives a 32-byte key from SECRET_KEY for Fernet symmetric encryption
-FIELD_ENCRYPTION_KEY = SECRET_KEY.encode()[:32]
-
-# ==============================================================================
-# DAY 47: PAYMENT GATEWAY CONFIGURATIONS (STRIPE & RAZORPAY)
-# ==============================================================================
-STRIPE_PUBLIC_KEY = os.getenv('STRIPE_PUBLIC_KEY', 'pk_test_sample_key')
-STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_sample_key')
-STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_sample_secret')
-
-RAZORPAY_KEY_ID = os.getenv('RAZORPAY_KEY_ID', 'rzp_test_sample_id')
-RAZORPAY_KEY_SECRET = os.getenv('RAZORPAY_KEY_SECRET', 'rzp_test_sample_secret')
-RAZORPAY_WEBHOOK_SECRET = os.getenv('RAZORPAY_WEBHOOK_SECRET', 'sample_webhook_secret')
+# Fernet Key for AES Field Encryption
+FERNET_ENCRYPTION_KEY = config('FERNET_ENCRYPTION_KEY', default='')
+FIELD_ENCRYPTION_KEY = (FERNET_ENCRYPTION_KEY.encode() if FERNET_ENCRYPTION_KEY else SECRET_KEY.encode())[:32]
