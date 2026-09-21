@@ -311,6 +311,20 @@ urlpatterns += [
     path('recruiter/premium/hiring-efficiency/', PremiumHiringEfficiencyAPIView.as_view(), name='recruiter-premium-hiring-efficiency'),
 ]
 
+# Day 50: Admin Finance & Billing Management Routes
+from .views import (
+    AdminRevenueDashboardAPIView,
+    AdminTransactionListAPIView,
+    AdminRefundTriggerAPIView
+)
+
+urlpatterns += [
+    path('admin/finance/dashboard/', AdminRevenueDashboardAPIView.as_view(), name='admin-finance-dashboard'),
+    path('admin/finance/transactions/', AdminTransactionListAPIView.as_view(), name='admin-finance-transactions'),
+    path('admin/finance/transactions/<int:transaction_id>/refund/', AdminRefundTriggerAPIView.as_view(), name='admin-finance-refund'),
+]
+
+
 
 
 

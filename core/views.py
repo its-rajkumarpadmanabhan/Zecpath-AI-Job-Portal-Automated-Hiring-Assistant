@@ -2200,6 +2200,75 @@ class PremiumHiringEfficiencyAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 50: ADMIN FINANCE & BILLING MANAGEMENT APIS
+# ==============================================================================
+from core.utils.admin_finance import AdminFinanceService
+from core.models import PaymentTransaction
+
+class IsAdminUserOnly(permissions.BasePermission):
+    """Restricts access strictly to Platform Administrators."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and 
+            request.user.is_authenticated and 
+            (getattr(request.user, 'role', '') == 'admin' or request.user.is_staff)
+        )
+
+class AdminRevenueDashboardAPIView(APIView):
+    """
+    Endpoint: Returns daily/monthly revenue, plan-wise breakdowns, and transaction metrics.
+    """
+    permission_classes = [IsAdminUserOnly]
+
+    def get(self, request):
+        data = AdminFinanceService.get_revenue_dashboard()
+        return Response({"status": "success", "data": data}, status=status.HTTP_200_OK)
+
+class AdminTransactionListAPIView(APIView):
+    """
+    Endpoint: Returns paginated financial audit logs and suspicious/failed attempts.
+    """
+    permission_classes = [IsAdminUserOnly]
+
+    def get(self, request):
+        status_filter = request.GET.get('status')
+        qs = PaymentTransaction.objects.select_related('user', 'subscription').all()
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+
+        transactions = [
+            {
+                "id": tx.id,
+                "user": tx.user.email if tx.user else None,
+                "amount": float(tx.amount),
+                "currency": tx.currency,
+                "payment_method": tx.payment_method,
+                "reference": tx.transaction_reference,
+                "status": tx.status,
+                "timestamp": tx.created_at.isoformat(),
+                "metadata": tx.raw_response
+            }
+            for tx in qs[:50]
+        ]
+        return Response({"status": "success", "count": len(transactions), "transactions": transactions}, status=status.HTTP_200_OK)
+
+class AdminRefundTriggerAPIView(APIView):
+    """
+    Endpoint: Executes transaction refunds and updates audit trails.
+    """
+    permission_classes = [IsAdminUserOnly]
+
+    def post(self, request, transaction_id):
+        reason = request.data.get('reason', 'Admin initiated customer refund')
+        try:
+            result = AdminFinanceService.process_refund(transaction_id, reason, request.user)
+            return Response({"status": "success", "refund": result}, status=status.HTTP_200_OK)
+        except ValueError as err:
+            return Response({"error": str(err)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 
 
 
