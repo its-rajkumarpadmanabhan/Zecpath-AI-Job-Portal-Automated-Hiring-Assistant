@@ -1,0 +1,17 @@
+[Unit]
+Description=Gunicorn instance serving Zecpath AI Recruitment Platform
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/zecpath-backend
+Environment="PATH=/home/ubuntu/zecpath-backend/venv/bin"
+EnvironmentFile=/home/ubuntu/zecpath-backend/.env
+ExecStart=/home/ubuntu/zecpath-backend/venv/bin/gunicorn \
+          --workers 3 \
+          --bind unix:/home/ubuntu/zecpath-backend/zecpath.sock \
+          zecpath_backend.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
