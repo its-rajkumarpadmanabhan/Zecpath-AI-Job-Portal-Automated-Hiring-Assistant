@@ -270,8 +270,25 @@ class AIInterviewSession(models.Model):
         db_table = "ai_interview_sessions"
         ordering = ["-started_at"]
 
+    @property
+    def status(self):
+        return self.session_status
+
+    @status.setter
+    def status(self, value):
+        self.session_status = value
+
+    @property
+    def overall_score(self):
+        return self.ai_score
+
+    @overall_score.setter
+    def overall_score(self, value):
+        self.ai_score = value
+
     def __str__(self):
         return f"AI Session #{self.id} - App #{self.application_id} ({self.session_status})"
+
 
 
 # ------------------------------------------------------------------------------

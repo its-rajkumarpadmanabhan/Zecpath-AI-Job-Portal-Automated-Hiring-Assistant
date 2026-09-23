@@ -448,9 +448,10 @@ urlpatterns += [
     ),
 ]
 
-# Day 53 & 55: Cloud Storage, CDN & Security Audit Routes
+# Day 53, 55 & 59 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
-                    SecurityAuditReportAPIView)
+                    SecurityAuditReportAPIView, FinalQASignoffAPIView)
+
 
 urlpatterns += [
     # Day 53: Cloud Storage & CDN
@@ -468,4 +469,9 @@ urlpatterns += [
     path(
         "security/audit-report/", SecurityAuditReportAPIView.as_view(), name="security-audit-report"
     ),
+    # Day 59: Final QA Signoff
+    path(
+        "qa/final-signoff/", FinalQASignoffAPIView.as_view(), name="qa-final-signoff"
+    ),
 ]
+
