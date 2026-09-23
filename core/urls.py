@@ -331,6 +331,23 @@ urlpatterns += [
     path('devops/config-audit/', EnvironmentConfigAuditAPIView.as_view(), name='devops-config-audit'),
 ]
 
+# Day 53 & 55: Cloud Storage, CDN & Security Audit Routes
+from .views import (
+    ResumePresignedUploadAPIView,
+    ResumeSecureAccessAPIView,
+    SecurityAuditReportAPIView
+)
+
+urlpatterns += [
+    # Day 53: Cloud Storage & CDN
+    path('storage/resumes/presigned-upload/', ResumePresignedUploadAPIView.as_view(), name='storage-presigned-upload'),
+    path('storage/resumes/secure-url/', ResumeSecureAccessAPIView.as_view(), name='storage-secure-url'),
+
+    # Day 55: Security Audit
+    path('security/audit-report/', SecurityAuditReportAPIView.as_view(), name='security-audit-report'),
+]
+
+
 
 
 

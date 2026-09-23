@@ -150,6 +150,10 @@ class Job(models.Model):
         indexes = [
             # Composite index for filtering active public jobs sorted by creation date
             models.Index(fields=['status', '-created_at']),
+            # Index for fast search of active requisitions by employer
+            models.Index(fields=['employer', 'status'], name='idx_job_employer_status'),
+            # Composite index for filtering jobs by role type and creation date
+            models.Index(fields=['job_type', 'created_at'], name='idx_job_type_created'),
         ]
 
     def __str__(self):
@@ -198,6 +202,7 @@ class Application(models.Model):
     resume_snapshot = models.FileField(upload_to='application_resumes/', null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='applied', db_index=True) # Indexed for status queries
     applied_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     ats_score = models.FloatField(default=0.0, db_index=True, help_text="Calculated ATS suitability score percentage (0-100)")
 
     class Meta:
@@ -206,7 +211,12 @@ class Application(models.Model):
         indexes = [
             # Composite index for fast recruiter queries ordering applicants by rank/score
             models.Index(fields=['job', '-ats_score']),
+            # High-cardinality index for recruiter candidate pipelines
+            models.Index(fields=['job', 'status'], name='idx_app_job_status'),
+            # Composite index for tracking candidate submission timelines
+            models.Index(fields=['candidate', 'created_at'], name='idx_app_cand_created'),
         ]
+
 
     def __str__(self):
         return f"{self.candidate.email} - {self.job.title}"

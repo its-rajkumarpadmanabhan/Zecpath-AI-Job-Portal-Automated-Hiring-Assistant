@@ -18,10 +18,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Core Security
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key')
-DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost,api.zecpath.com', cast=Csv())
+DEBUG = config('DEBUG', default=True, cast=bool)
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost,api.zecpath.com,testserver,*', cast=Csv())
 
-# Database Credentials
+
+# Database Credentials & Connection Pooling (Day 54)
 DATABASES = {
     'default': {
         'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
@@ -30,8 +31,30 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default=''),
         'HOST': config('DB_HOST', default=''),
         'PORT': config('DB_PORT', default=''),
+        'CONN_MAX_AGE': 600,
     }
 }
+
+# Production Cache Configuration using Redis (Day 54)
+import sys
+if 'test' in sys.argv:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "zecpath-test-cache",
+            "TIMEOUT": 300,
+        }
+    }
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+            "TIMEOUT": 300,  # 5 minutes query cache
+        }
+    }
+
+
 
 # Application definition
 
@@ -46,14 +69,16 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'django_filters',
     'rest_framework_simplejwt.token_blacklist',
+    'storages',
     'core',
 ]
 
+# Day 55: JWT Hardening & Refresh Strategy
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),   # Short-lived access token
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),      # 7-day refresh window
+    'ROTATE_REFRESH_TOKENS': True,                    # Issues new refresh token on use
+    'BLACKLIST_AFTER_ROTATION': True,                 # Revokes used refresh tokens
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
@@ -127,6 +152,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AUTH_USER_MODEL = "core.User"
 
+# Day 55: Rate Limiting & Throttling
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -142,17 +168,18 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ),
 
-    # Day 43: API Throttling & Rate Limiting
+    # Day 43 & 55: API Throttling & Global Rate Limiting
     'DEFAULT_THROTTLE_CLASSES': [
         'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'anon': '30/minute',           # Anonymous users rate limit
-        'user': '120/minute',          # Authenticated users rate limit
+        'anon': '60/hour',             # Block unauthenticated scrapers
+        'user': '1000/day',            # Standard authenticated limit
+        'premium_recruiter': '20/minute',
+        'premium_insights': '15/minute',
         'ai_abuse': '5/minute',        # Strict throttle for expensive AI endpoints
         'auth_strict': '5/minute',     # Strict throttle for login / sensitive attempts
-        'premium_insights': '15/minute',
     },
 }
 
@@ -211,3 +238,20 @@ RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
 # Fernet Key for AES Field Encryption
 FERNET_ENCRYPTION_KEY = config('FERNET_ENCRYPTION_KEY', default='')
 FIELD_ENCRYPTION_KEY = (FERNET_ENCRYPTION_KEY.encode() if FERNET_ENCRYPTION_KEY else SECRET_KEY.encode())[:32]
+
+# ==============================================================================
+# DAY 53: AWS S3 & CDN CONFIGURATION
+# ==============================================================================
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='zecpath-resumes-private')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_DEFAULT_ACL = 'private'  # Prevent public access to private buckets
+AWS_S3_FILE_OVERWRITE = False
+
+# CloudFront CDN Domain
+AWS_S3_CUSTOM_DOMAIN = config('CLOUDFRONT_DOMAIN', default='')  # e.g., d111111abcdef8.cloudfront.net
+
+# Temporary signed URL validity window (in seconds)
+AWS_QUERYSTRING_EXPIRE = 900  # 15 minutes
