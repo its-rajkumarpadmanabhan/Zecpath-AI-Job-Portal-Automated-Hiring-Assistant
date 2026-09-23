@@ -1,8 +1,10 @@
 import random
 from datetime import timedelta
+
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from core.models import User, Candidate, Employer, Job, Application, AICall
+
+from core.models import AICall, Application, Candidate, Employer, Job, User
 from core.utils.ai_call_engine import trigger_ai_call
 from core.utils.automation_engine import evaluate_and_apply_auto_action
 
@@ -38,7 +40,7 @@ class Command(BaseCommand):
                 "website": "https://apexhealth.org",
                 "domain": "Healthcare SaaS",
                 "company_size": "100-250 employees",
-            }
+            },
         ]
 
         employer_users = []
@@ -49,8 +51,8 @@ class Command(BaseCommand):
                     "name": emp_info["name"],
                     "role": "recruiter",
                     "is_active": True,
-                    "is_verified": True
-                }
+                    "is_verified": True,
+                },
             )
             if created:
                 user.set_password("ZecpathRecruiter2026!")
@@ -63,8 +65,8 @@ class Command(BaseCommand):
                     "website": emp_info["website"],
                     "domain": emp_info["domain"],
                     "company_size": emp_info["company_size"],
-                    "is_verified": True
-                }
+                    "is_verified": True,
+                },
             )
             employer_users.append(user)
             self.stdout.write(f"  [+] Employer: {user.name} ({emp_info['company_name']})")
@@ -86,7 +88,7 @@ class Command(BaseCommand):
                 "salary_max": 180000.00,
                 "location": "San Francisco, CA (Hybrid)",
                 "job_type": "full_time",
-                "status": "active"
+                "status": "active",
             },
             {
                 "employer": employer_users[1],
@@ -103,7 +105,7 @@ class Command(BaseCommand):
                 "salary_max": 195000.00,
                 "location": "New York, NY (Remote)",
                 "job_type": "full_time",
-                "status": "active"
+                "status": "active",
             },
             {
                 "employer": employer_users[2],
@@ -119,8 +121,8 @@ class Command(BaseCommand):
                 "salary_max": 165000.00,
                 "location": "Austin, TX (Remote)",
                 "job_type": "remote",
-                "status": "active"
-            }
+                "status": "active",
+            },
         ]
 
         jobs = []
@@ -129,7 +131,7 @@ class Command(BaseCommand):
                 title=j_info["title"],
                 company=j_info["company"],
                 employer=j_info["employer"],
-                defaults=j_info
+                defaults=j_info,
             )
             jobs.append(job)
             self.stdout.write(f"  [+] Job Posting: {job.title}")
@@ -143,7 +145,7 @@ class Command(BaseCommand):
                 "education": "B.S. in Computer Science - UC Berkeley (2020)",
                 "experience": "5 years software engineering experience building scalable backend services and Celery task queues.",
                 "expected_salary": 160000.00,
-                "ats_scores": [92.5, 88.0, 72.0]
+                "ats_scores": [92.5, 88.0, 72.0],
             },
             {
                 "email": "priya.sharma@techhub.net",
@@ -152,7 +154,7 @@ class Command(BaseCommand):
                 "education": "M.S. in Software Engineering - Carnegie Mellon University (2021)",
                 "experience": "4 years building modern web applications, state management, and real-time candidate pipelines.",
                 "expected_salary": 155000.00,
-                "ats_scores": [78.0, 94.0, 65.0]
+                "ats_scores": [78.0, 94.0, 65.0],
             },
             {
                 "email": "david.kowalski@cloudnet.io",
@@ -161,7 +163,7 @@ class Command(BaseCommand):
                 "education": "B.S. in Information Technology - UT Austin (2019)",
                 "experience": "6 years managing multi-cloud Kubernetes clusters, automated infrastructure deployments, and site reliability.",
                 "expected_salary": 165000.00,
-                "ats_scores": [68.0, 70.0, 96.0]
+                "ats_scores": [68.0, 70.0, 96.0],
             },
             {
                 "email": "jessica.taylor@codestudio.com",
@@ -170,18 +172,14 @@ class Command(BaseCommand):
                 "education": "B.S. in Computer Engineering - Georgia Tech (2022)",
                 "experience": "3 years backend Java development and relational database management.",
                 "expected_salary": 120000.00,
-                "ats_scores": [45.0, 52.0, 58.0]
-            }
+                "ats_scores": [45.0, 52.0, 58.0],
+            },
         ]
 
         for cand_info in candidates_data:
             user, created = User.objects.get_or_create(
                 email=cand_info["email"],
-                defaults={
-                    "name": cand_info["name"],
-                    "role": "candidate",
-                    "is_active": True
-                }
+                defaults={"name": cand_info["name"], "role": "candidate", "is_active": True},
             )
             if created:
                 user.set_password("ZecpathCandidate2026!")
@@ -194,8 +192,8 @@ class Command(BaseCommand):
                     "education": cand_info["education"],
                     "experience": cand_info["experience"],
                     "expected_salary": cand_info["expected_salary"],
-                    "is_deleted": False
-                }
+                    "is_deleted": False,
+                },
             )
             self.stdout.write(f"  [+] Candidate Profile: {user.name} ({user.email})")
 
@@ -203,12 +201,7 @@ class Command(BaseCommand):
             for idx, job in enumerate(jobs):
                 score = cand_info["ats_scores"][idx]
                 app, app_created = Application.objects.get_or_create(
-                    candidate=user,
-                    job=job,
-                    defaults={
-                        "status": "applied",
-                        "ats_score": score
-                    }
+                    candidate=user, job=job, defaults={"status": "applied", "ats_score": score}
                 )
                 if not app_created:
                     app.ats_score = score
@@ -218,11 +211,13 @@ class Command(BaseCommand):
                 evaluate_and_apply_auto_action(app)
 
                 # Check if AI Call was created and trigger execution simulation for demonstration
-                if hasattr(app, 'ai_call'):
+                if hasattr(app, "ai_call"):
                     ai_call = app.ai_call
-                    if ai_call.status == 'queued' and score >= 85.0:
-                        ai_call.status = 'completed'
-                        ai_call.completed_at = timezone.now() - timedelta(minutes=random.randint(10, 120))
+                    if ai_call.status == "queued" and score >= 85.0:
+                        ai_call.status = "completed"
+                        ai_call.completed_at = timezone.now() - timedelta(
+                            minutes=random.randint(10, 120)
+                        )
                         ai_call.save()
 
                     self.stdout.write(

@@ -8,42 +8,93 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_aianswer_ai_annotations_aianswer_completeness_score_and_more'),
+        ("core", "0002_aianswer_ai_annotations_aianswer_completeness_score_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='InterviewAvailabilitySlot',
+            name="InterviewAvailabilitySlot",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('start_time', models.DateTimeField()),
-                ('end_time', models.DateTimeField()),
-                ('is_booked', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('employer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='availability_slots', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("start_time", models.DateTimeField()),
+                ("end_time", models.DateTimeField()),
+                ("is_booked", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "employer",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="availability_slots",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'db_table': 'interview_availability_slots',
-                'ordering': ['start_time'],
+                "db_table": "interview_availability_slots",
+                "ordering": ["start_time"],
             },
         ),
         migrations.CreateModel(
-            name='InterviewSchedule',
+            name="InterviewSchedule",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('interview_type', models.CharField(default='AI Voice Screening', max_length=50)),
-                ('meeting_link', models.URLField(blank=True, null=True)),
-                ('status', models.CharField(choices=[('scheduled', 'Scheduled'), ('rescheduled', 'Rescheduled'), ('cancelled', 'Cancelled'), ('completed', 'Completed')], default='scheduled', max_length=20)),
-                ('confirmation_sent', models.BooleanField(default=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('application', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='schedules', to='core.application')),
-                ('scheduled_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
-                ('slot', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='schedule', to='core.interviewavailabilityslot')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("interview_type", models.CharField(default="AI Voice Screening", max_length=50)),
+                ("meeting_link", models.URLField(blank=True, null=True)),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[
+                            ("scheduled", "Scheduled"),
+                            ("rescheduled", "Rescheduled"),
+                            ("cancelled", "Cancelled"),
+                            ("completed", "Completed"),
+                        ],
+                        default="scheduled",
+                        max_length=20,
+                    ),
+                ),
+                ("confirmation_sent", models.BooleanField(default=False)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "application",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="schedules",
+                        to="core.application",
+                    ),
+                ),
+                (
+                    "scheduled_by",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "slot",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="schedule",
+                        to="core.interviewavailabilityslot",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'interview_schedules',
-                'ordering': ['-created_at'],
+                "db_table": "interview_schedules",
+                "ordering": ["-created_at"],
             },
         ),
     ]

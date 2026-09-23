@@ -9,35 +9,40 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
+
 import os
-from pathlib import Path
 from datetime import timedelta
-from decouple import config, Csv
+from pathlib import Path
+
+from decouple import Csv, config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Core Security
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='127.0.0.1,localhost,api.zecpath.com,testserver,*', cast=Csv())
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-dev-key")
+DEBUG = config("DEBUG", default=True, cast=bool)
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", default="127.0.0.1,localhost,api.zecpath.com,testserver,*", cast=Csv()
+)
 
 
 # Database Credentials & Connection Pooling (Day 54)
 DATABASES = {
-    'default': {
-        'ENGINE': config('DB_ENGINE', default='django.db.backends.sqlite3'),
-        'NAME': config('DB_NAME', default=str(BASE_DIR / 'db.sqlite3')),
-        'USER': config('DB_USER', default=''),
-        'PASSWORD': config('DB_PASSWORD', default=''),
-        'HOST': config('DB_HOST', default=''),
-        'PORT': config('DB_PORT', default=''),
-        'CONN_MAX_AGE': 600,
+    "default": {
+        "ENGINE": config("DB_ENGINE", default="django.db.backends.sqlite3"),
+        "NAME": config("DB_NAME", default=str(BASE_DIR / "db.sqlite3")),
+        "USER": config("DB_USER", default=""),
+        "PASSWORD": config("DB_PASSWORD", default=""),
+        "HOST": config("DB_HOST", default=""),
+        "PORT": config("DB_PORT", default=""),
+        "CONN_MAX_AGE": 600,
     }
 }
 
 # Production Cache Configuration using Redis (Day 54)
 import sys
-if 'test' in sys.argv:
+
+if "test" in sys.argv:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
@@ -55,87 +60,87 @@ else:
     }
 
 
-
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'rest_framework_simplejwt',
-    'django_filters',
-    'rest_framework_simplejwt.token_blacklist',
-    'storages',
-    'core',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "django_filters",
+    "rest_framework_simplejwt.token_blacklist",
+    "storages",
+    "drf_spectacular",
+    "core",
 ]
 
 # Day 55: JWT Hardening & Refresh Strategy
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),   # Short-lived access token
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),      # 7-day refresh window
-    'ROTATE_REFRESH_TOKENS': True,                    # Issues new refresh token on use
-    'BLACKLIST_AFTER_ROTATION': True,                 # Revokes used refresh tokens
-    'AUTH_HEADER_TYPES': ('Bearer',),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),  # Short-lived access token
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),  # 7-day refresh window
+    "ROTATE_REFRESH_TOKENS": True,  # Issues new refresh token on use
+    "BLACKLIST_AFTER_ROTATION": True,  # Revokes used refresh tokens
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'core.middleware.PaidFeatureAccessMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "core.middleware.PaidFeatureAccessMiddleware",
 ]
 
-ROOT_URLCONF = 'zecpath_backend.urls'
+ROOT_URLCONF = "zecpath_backend.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'zecpath_backend.wsgi.application'
+WSGI_APPLICATION = "zecpath_backend.wsgi.application"
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -144,83 +149,112 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 AUTH_USER_MODEL = "core.User"
 
 # Day 55: Rate Limiting & Throttling
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
-
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "core.exceptions.custom_exception_handler",
     # Day 14: Pagination & Filtering Configuration
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,  # Default 10 items per page
-    'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
-        'rest_framework.filters.SearchFilter',
-        'rest_framework.filters.OrderingFilter',
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,  # Default 10 items per page
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
     ),
-
     # Day 43 & 55: API Throttling & Global Rate Limiting
-    'DEFAULT_THROTTLE_CLASSES': [
-        'rest_framework.throttling.AnonRateThrottle',
-        'rest_framework.throttling.UserRateThrottle'
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '60/hour',             # Block unauthenticated scrapers
-        'user': '1000/day',            # Standard authenticated limit
-        'premium_recruiter': '20/minute',
-        'premium_insights': '15/minute',
-        'ai_abuse': '5/minute',        # Strict throttle for expensive AI endpoints
-        'auth_strict': '5/minute',     # Strict throttle for login / sensitive attempts
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "60/hour",  # Block unauthenticated scrapers
+        "user": "1000/day",  # Standard authenticated limit
+        "premium_recruiter": "20/minute",
+        "premium_insights": "15/minute",
+        "ai_abuse": "5/minute",  # Strict throttle for expensive AI endpoints
+        "auth_strict": "5/minute",  # Strict throttle for login / sensitive attempts
     },
 }
 
+# Day 56: OpenAPI / Swagger Documentation Settings
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Zecpath AI Recruitment Platform API",
+    "DESCRIPTION": (
+        "Production REST API for automated screening, voice interviewing, "
+        "candidate evaluation, SaaS subscriptions, and recruitment analytics."
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SECURITY": [{"BearerAuth": []}],
+    "APPEND_COMPONENTS": {
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Enter JWT Bearer token formatted as: Bearer <access_token>",
+            }
+        }
+    },
+}
+
+
 # Email Backend Configuration (Console Output for local testing)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'Zecpath Automated Assistant <no-reply@zecpath.com>'
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "Zecpath Automated Assistant <no-reply@zecpath.com>"
 
 # Celery Configuration (Redis Broker & Result Backend)
-CELERY_BROKER_URL = config('REDIS_URL', default=config('CELERY_BROKER_URL', default='redis://127.0.0.1:6379/0'))
-CELERY_RESULT_BACKEND = config('REDIS_URL', default=config('CELERY_RESULT_BACKEND', default='redis://127.0.0.1:6379/0'))
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+CELERY_BROKER_URL = config(
+    "REDIS_URL", default=config("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/0")
+)
+CELERY_RESULT_BACKEND = config(
+    "REDIS_URL", default=config("CELERY_RESULT_BACKEND", default="redis://127.0.0.1:6379/0")
+)
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
 
 # Eager execution fallback for dev environments where Redis broker is offline
-CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=True, cast=bool)
+CELERY_TASK_ALWAYS_EAGER = config("CELERY_TASK_ALWAYS_EAGER", default=True, cast=bool)
 CELERY_TASK_EAGER_PROPAGATES = True
 
 # Celery Beat Periodic Tasks Schedule (Cron Jobs)
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
-    'periodic-auto-screening-hourly': {
-        'task': 'core.tasks.periodic_batch_auto_screening_task',
-        'schedule': crontab(minute=0),  # Runs every hour at minute 0
+    "periodic-auto-screening-hourly": {
+        "task": "core.tasks.periodic_batch_auto_screening_task",
+        "schedule": crontab(minute=0),  # Runs every hour at minute 0
     },
-    'periodic-analytics-digest-daily': {
-        'task': 'core.tasks.periodic_system_analytics_digest_task',
-        'schedule': crontab(hour=0, minute=0),  # Runs daily at midnight
+    "periodic-analytics-digest-daily": {
+        "task": "core.tasks.periodic_system_analytics_digest_task",
+        "schedule": crontab(hour=0, minute=0),  # Runs daily at midnight
     },
 }
 
 # ==============================================================================
 # DAY 35: VOICE & AI INTEGRATION SETTINGS
 # ==============================================================================
-GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
-VOICE_SERVICE_PROVIDER = config('VOICE_SERVICE_PROVIDER', default='mock')  # 'mock', 'twilio', 'deepgram'
-DEFAULT_VOICE_LANGUAGE = 'en-US'
-DEFAULT_VOICE_GENDER = 'female'  # 'male', 'female', 'neutral'
-VOICE_SYNTHESIS_MODEL = 'gemini-2.5-flash'
+GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
+VOICE_SERVICE_PROVIDER = config(
+    "VOICE_SERVICE_PROVIDER", default="mock"
+)  # 'mock', 'twilio', 'deepgram'
+DEFAULT_VOICE_LANGUAGE = "en-US"
+DEFAULT_VOICE_GENDER = "female"  # 'male', 'female', 'neutral'
+VOICE_SYNTHESIS_MODEL = "gemini-2.5-flash"
 AI_SERVICE_MAX_RETRIES = 3
 AI_SERVICE_TIMEOUT_SECONDS = 15
 
@@ -228,30 +262,34 @@ AI_SERVICE_TIMEOUT_SECONDS = 15
 # DAY 43 & 52: CRYPTOGRAPHY & PAYMENT GATEWAY SETTINGS
 # ==============================================================================
 # Payment Secrets
-STRIPE_PUBLIC_KEY = config('STRIPE_PUBLIC_KEY', default='')
-STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY', default='')
-STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET', default='')
-RAZORPAY_KEY_ID = config('RAZORPAY_KEY_ID', default='')
-RAZORPAY_KEY_SECRET = config('RAZORPAY_KEY_SECRET', default='')
-RAZORPAY_WEBHOOK_SECRET = config('RAZORPAY_WEBHOOK_SECRET', default='')
+STRIPE_PUBLIC_KEY = config("STRIPE_PUBLIC_KEY", default="")
+STRIPE_SECRET_KEY = config("STRIPE_SECRET_KEY", default="")
+STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
+RAZORPAY_KEY_ID = config("RAZORPAY_KEY_ID", default="")
+RAZORPAY_KEY_SECRET = config("RAZORPAY_KEY_SECRET", default="")
+RAZORPAY_WEBHOOK_SECRET = config("RAZORPAY_WEBHOOK_SECRET", default="")
 
 # Fernet Key for AES Field Encryption
-FERNET_ENCRYPTION_KEY = config('FERNET_ENCRYPTION_KEY', default='')
-FIELD_ENCRYPTION_KEY = (FERNET_ENCRYPTION_KEY.encode() if FERNET_ENCRYPTION_KEY else SECRET_KEY.encode())[:32]
+FERNET_ENCRYPTION_KEY = config("FERNET_ENCRYPTION_KEY", default="")
+FIELD_ENCRYPTION_KEY = (
+    FERNET_ENCRYPTION_KEY.encode() if FERNET_ENCRYPTION_KEY else SECRET_KEY.encode()
+)[:32]
 
 # ==============================================================================
 # DAY 53: AWS S3 & CDN CONFIGURATION
 # ==============================================================================
-AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
-AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
-AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='zecpath-resumes-private')
-AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
-AWS_S3_SIGNATURE_VERSION = 's3v4'
-AWS_DEFAULT_ACL = 'private'  # Prevent public access to private buckets
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default="zecpath-resumes-private")
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_DEFAULT_ACL = "private"  # Prevent public access to private buckets
 AWS_S3_FILE_OVERWRITE = False
 
 # CloudFront CDN Domain
-AWS_S3_CUSTOM_DOMAIN = config('CLOUDFRONT_DOMAIN', default='')  # e.g., d111111abcdef8.cloudfront.net
+AWS_S3_CUSTOM_DOMAIN = config(
+    "CLOUDFRONT_DOMAIN", default=""
+)  # e.g., d111111abcdef8.cloudfront.net
 
 # Temporary signed URL validity window (in seconds)
 AWS_QUERYSTRING_EXPIRE = 900  # 15 minutes

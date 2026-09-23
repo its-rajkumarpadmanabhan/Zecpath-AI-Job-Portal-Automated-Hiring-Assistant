@@ -1,16 +1,21 @@
 import logging
-from django.utils import timezone
-from django.core.mail import send_mail
+
 from django.conf import settings
-from core.models import InterviewAvailabilitySlot, InterviewSchedule, Application
+from django.core.mail import send_mail
+from django.utils import timezone
+
+from core.models import (Application, InterviewAvailabilitySlot,
+                         InterviewSchedule)
 
 logger = logging.getLogger(__name__)
+
 
 class InterviewSchedulerEngine:
     """
     Automated scheduling engine managing availability slots, conflict checks,
     rescheduling logic, and automated notification triggers.
     """
+
     @classmethod
     def book_interview(cls, application_id: int, slot_id: int, user) -> dict:
         try:
@@ -32,12 +37,13 @@ class InterviewSchedulerEngine:
 
         # Check if candidate already has an active scheduled interview for this application
         existing_schedule = InterviewSchedule.objects.filter(
-            application=application,
-            status__in=['scheduled', 'rescheduled']
+            application=application, status__in=["scheduled", "rescheduled"]
         ).first()
 
         if existing_schedule:
-            raise ValueError("Application already has an active interview schedule. Please use the reschedule endpoint.")
+            raise ValueError(
+                "Application already has an active interview schedule. Please use the reschedule endpoint."
+            )
 
         # 2. Book Slot and Create Schedule
         slot.is_booked = True
@@ -49,8 +55,8 @@ class InterviewSchedulerEngine:
             slot=slot,
             scheduled_by=user,
             meeting_link=meeting_link,
-            status='scheduled',
-            confirmation_sent=True
+            status="scheduled",
+            confirmation_sent=True,
         )
 
         # 3. Trigger Notification
@@ -63,7 +69,7 @@ class InterviewSchedulerEngine:
             "end_time": slot.end_time,
             "meeting_link": schedule.meeting_link,
             "status": schedule.status,
-            "confirmation_sent": schedule.confirmation_sent
+            "confirmation_sent": schedule.confirmation_sent,
         }
 
     @classmethod
@@ -94,7 +100,7 @@ class InterviewSchedulerEngine:
         new_slot.save()
 
         schedule.slot = new_slot
-        schedule.status = 'rescheduled'
+        schedule.status = "rescheduled"
         schedule.save()
 
         # Trigger reschedule notification
@@ -105,10 +111,12 @@ class InterviewSchedulerEngine:
             "new_start_time": new_slot.start_time,
             "new_end_time": new_slot.end_time,
             "status": schedule.status,
-            "meeting_link": schedule.meeting_link
+            "meeting_link": schedule.meeting_link,
         }
 
     @staticmethod
     def _trigger_notification_email(schedule: InterviewSchedule, event_type: str = "Confirmation"):
-        candidate_email = getattr(schedule.application.candidate, 'email', 'candidate@example.com')
-        logger.info(f"[Email Notification Trigger] Sending {event_type} email to {candidate_email} for Schedule #{schedule.id}")
+        candidate_email = getattr(schedule.application.candidate, "email", "candidate@example.com")
+        logger.info(
+            f"[Email Notification Trigger] Sending {event_type} email to {candidate_email} for Schedule #{schedule.id}"
+        )

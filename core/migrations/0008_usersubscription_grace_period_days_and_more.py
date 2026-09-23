@@ -7,33 +7,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0007_subscriptionplan_paymenttransaction_billinghistory_and_more'),
+        ("core", "0007_subscriptionplan_paymenttransaction_billinghistory_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='usersubscription',
-            name='grace_period_days',
+            model_name="usersubscription",
+            name="grace_period_days",
             field=models.IntegerField(default=3),
         ),
         migrations.AddField(
-            model_name='usersubscription',
-            name='last_usage_reset',
+            model_name="usersubscription",
+            name="last_usage_reset",
             field=models.DateTimeField(default=django.utils.timezone.now),
         ),
         migrations.AddField(
-            model_name='usersubscription',
-            name='monthly_ai_screenings_used',
+            model_name="usersubscription",
+            name="monthly_ai_screenings_used",
             field=models.IntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='usersubscription',
-            name='monthly_candidate_views_used',
+            model_name="usersubscription",
+            name="monthly_candidate_views_used",
             field=models.IntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='usersubscription',
-            name='monthly_job_posts_used',
+            model_name="usersubscription",
+            name="monthly_job_posts_used",
             field=models.IntegerField(default=0),
         ),
     ]

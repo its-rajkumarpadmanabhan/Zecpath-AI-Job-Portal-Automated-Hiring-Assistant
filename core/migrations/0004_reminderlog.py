@@ -7,27 +7,63 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0003_interviewavailabilityslot_interviewschedule'),
+        ("core", "0003_interviewavailabilityslot_interviewschedule"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='ReminderLog',
+            name="ReminderLog",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('stage', models.CharField(choices=[('24h_before', '24 Hours Before'), ('1h_before', '1 Hour Before'), ('immediate', 'Immediate Follow-up')], max_length=20)),
-                ('channel', models.CharField(choices=[('email', 'Email'), ('voice', 'Voice Call Hook'), ('sms', 'SMS')], default='email', max_length=20)),
-                ('status', models.CharField(choices=[('sent', 'Sent'), ('failed', 'Failed'), ('retried', 'Retried')], default='sent', max_length=20)),
-                ('recipient', models.CharField(max_length=255)),
-                ('subject_or_hook', models.CharField(max_length=255)),
-                ('error_message', models.TextField(blank=True, null=True)),
-                ('retry_count', models.PositiveIntegerField(default=0)),
-                ('sent_at', models.DateTimeField(auto_now_add=True)),
-                ('schedule', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='reminder_logs', to='core.interviewschedule')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                (
+                    "stage",
+                    models.CharField(
+                        choices=[
+                            ("24h_before", "24 Hours Before"),
+                            ("1h_before", "1 Hour Before"),
+                            ("immediate", "Immediate Follow-up"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "channel",
+                    models.CharField(
+                        choices=[("email", "Email"), ("voice", "Voice Call Hook"), ("sms", "SMS")],
+                        default="email",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "status",
+                    models.CharField(
+                        choices=[("sent", "Sent"), ("failed", "Failed"), ("retried", "Retried")],
+                        default="sent",
+                        max_length=20,
+                    ),
+                ),
+                ("recipient", models.CharField(max_length=255)),
+                ("subject_or_hook", models.CharField(max_length=255)),
+                ("error_message", models.TextField(blank=True, null=True)),
+                ("retry_count", models.PositiveIntegerField(default=0)),
+                ("sent_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "schedule",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="reminder_logs",
+                        to="core.interviewschedule",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'ai_interview_reminder_logs',
-                'ordering': ['-sent_at'],
+                "db_table": "ai_interview_reminder_logs",
+                "ordering": ["-sent_at"],
             },
         ),
     ]

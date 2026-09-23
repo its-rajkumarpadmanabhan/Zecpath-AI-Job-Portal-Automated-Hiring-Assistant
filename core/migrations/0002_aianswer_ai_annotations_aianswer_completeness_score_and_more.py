@@ -6,33 +6,33 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='aianswer',
-            name='ai_annotations',
+            model_name="aianswer",
+            name="ai_annotations",
             field=models.JSONField(blank=True, default=dict),
         ),
         migrations.AddField(
-            model_name='aianswer',
-            name='completeness_score',
+            model_name="aianswer",
+            name="completeness_score",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='aianswer',
-            name='final_score',
+            model_name="aianswer",
+            name="final_score",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='aianswer',
-            name='keyword_score',
+            model_name="aianswer",
+            name="keyword_score",
             field=models.FloatField(default=0.0),
         ),
         migrations.AddField(
-            model_name='aianswer',
-            name='relevance_score',
+            model_name="aianswer",
+            name="relevance_score",
             field=models.FloatField(default=0.0),
         ),
     ]

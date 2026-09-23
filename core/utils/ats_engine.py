@@ -1,5 +1,6 @@
 import re
 
+
 def calculate_skill_match(required_skills_str, candidate_skills_list):
     """
     Calculates skill overlap percentage between job requirements and candidate skills.
@@ -8,7 +9,7 @@ def calculate_skill_match(required_skills_str, candidate_skills_list):
     if not required_skills_str or not candidate_skills_list:
         return 0.0
 
-    req_skills = set(s.strip().lower() for s in required_skills_str.split(',') if s.strip())
+    req_skills = set(s.strip().lower() for s in required_skills_str.split(",") if s.strip())
     cand_skills = set(s.strip().lower() for s in candidate_skills_list)
 
     if not req_skills:
@@ -52,8 +53,8 @@ def calculate_role_relevance(job_title, candidate_role):
     if not job_title or not candidate_role:
         return 50.0  # Neutral score baseline
 
-    job_tokens = set(re.findall(r'\w+', job_title.lower()))
-    cand_tokens = set(re.findall(r'\w+', candidate_role.lower()))
+    job_tokens = set(re.findall(r"\w+", job_title.lower()))
+    cand_tokens = set(re.findall(r"\w+", candidate_role.lower()))
 
     if not job_tokens:
         return 100.0
@@ -70,18 +71,18 @@ def compute_ats_score(job, parsed_resume_data):
     Returns normalized suitability score percentage (0 - 100%).
     """
     # 1. Skill Match Score
-    req_skills = getattr(job, 'skills_required', '')
-    cand_skills = parsed_resume_data.get('extracted_skills', {}).get('skills_list', [])
+    req_skills = getattr(job, "skills_required", "")
+    cand_skills = parsed_resume_data.get("extracted_skills", {}).get("skills_list", [])
     skill_score = calculate_skill_match(req_skills, cand_skills)
 
     # 2. Experience Score (Safe conversion)
-    req_years = getattr(job, 'experience_required', 0)
-    cand_years = parsed_resume_data.get('professional_summary', {}).get('years_of_experience', 0)
+    req_years = getattr(job, "experience_required", 0)
+    cand_years = parsed_resume_data.get("professional_summary", {}).get("years_of_experience", 0)
     exp_score = calculate_experience_match(req_years, cand_years)
 
     # 3. Role Relevance Score
     job_title = job.title
-    cand_role = parsed_resume_data.get('professional_summary', {}).get('target_role', '')
+    cand_role = parsed_resume_data.get("professional_summary", {}).get("target_role", "")
     role_score = calculate_role_relevance(job_title, cand_role)
 
     # Weighted Calculation
@@ -93,6 +94,6 @@ def compute_ats_score(job, parsed_resume_data):
         "breakdown": {
             "skill_match_percentage": skill_score,
             "experience_match_percentage": exp_score,
-            "role_relevance_percentage": role_score
-        }
+            "role_relevance_percentage": role_score,
+        },
     }

@@ -1,8 +1,10 @@
 import time
+
+from django.conf import settings
 from django.db import connection, reset_queries
 from django.db.models import Prefetch
-from django.conf import settings
-from core.models import Job, Application, AIInterviewSession
+
+from core.models import AIInterviewSession, Application, Job
 
 
 class SystemBenchmarkService:
@@ -20,8 +22,8 @@ class SystemBenchmarkService:
         start_unopt = time.perf_counter()
         unoptimized_apps = list(Application.objects.all()[:25])
         for app in unoptimized_apps:
-            _ = getattr(app.job, 'title', None)
-            _ = getattr(app.candidate, 'email', None)
+            _ = getattr(app.job, "title", None)
+            _ = getattr(app.candidate, "email", None)
         unopt_time = (time.perf_counter() - start_unopt) * 1000
         unopt_query_count = len(connection.queries)
 
@@ -30,30 +32,32 @@ class SystemBenchmarkService:
         # 2. Optimized Run (Using select_related to collapse into a single SQL join)
         start_opt = time.perf_counter()
         optimized_apps = list(
-            Application.objects.select_related('job', 'candidate')
-            .prefetch_related('ai_candidate_report')
+            Application.objects.select_related("job", "candidate")
+            .prefetch_related("ai_candidate_report")
             .all()[:25]
         )
         for app in optimized_apps:
-            _ = getattr(app.job, 'title', None)
-            _ = getattr(app.candidate, 'email', None)
+            _ = getattr(app.job, "title", None)
+            _ = getattr(app.candidate, "email", None)
         opt_time = (time.perf_counter() - start_opt) * 1000
         opt_query_count = len(connection.queries)
 
         settings.DEBUG = False
 
-        improvement_pct = round(((unopt_time - opt_time) / unopt_time * 100), 2) if unopt_time > 0 else 0.0
+        improvement_pct = (
+            round(((unopt_time - opt_time) / unopt_time * 100), 2) if unopt_time > 0 else 0.0
+        )
 
         return {
             "unoptimized": {
                 "execution_time_ms": round(unopt_time, 2),
-                "total_queries": unopt_query_count
+                "total_queries": unopt_query_count,
             },
             "optimized": {
                 "execution_time_ms": round(opt_time, 2),
-                "total_queries": opt_query_count
+                "total_queries": opt_query_count,
             },
-            "latency_reduction_pct": improvement_pct
+            "latency_reduction_pct": improvement_pct,
         }
 
     @classmethod
@@ -63,21 +67,17 @@ class SystemBenchmarkService:
 
         return {
             "test_target": "AI Recruitment Pipeline & Analytics Endpoints",
-            "simulated_concurrency": {
-                "virtual_users": 100,
-                "spawn_rate": 10,
-                "duration": "60s"
-            },
+            "simulated_concurrency": {"virtual_users": 100, "spawn_rate": 10, "duration": "60s"},
             "bottlenecks_identified": [
                 "N+1 query overhead on Application -> Job foreign keys",
                 "High latency on non-indexed recruitment status lookups",
-                "Celery default worker queue backpressure under simultaneous AI speech tasks"
+                "Celery default worker queue backpressure under simultaneous AI speech tasks",
             ],
             "optimizations_applied": [
                 "Applied select_related('job', 'candidate') to eliminate redundant joins",
                 "Added db_index=True to Application.status and Job.employer",
-                "Configured Celery worker autoscale options (--autoscale=10,3) for task concurrency"
+                "Configured Celery worker autoscale options (--autoscale=10,3) for task concurrency",
             ],
             "query_benchmark_results": benchmark,
-            "stability_status": "Production Ready / Optimal Throughput"
+            "stability_status": "Production Ready / Optimal Throughput",
         }

@@ -1,6 +1,7 @@
-from rest_framework.views import exception_handler
-from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import exception_handler
+
 
 def custom_exception_handler(exc, context):
     # Call DRF's default exception handler first to get the standard response
@@ -11,7 +12,7 @@ def custom_exception_handler(exc, context):
             "status": "error",
             "code": response.status_code,
             "message": "An error occurred while processing your request.",
-            "errors": response.data
+            "errors": response.data,
         }
 
         # Format specific status codes with cleaner contextual messages
@@ -27,11 +28,14 @@ def custom_exception_handler(exc, context):
         response.data = custom_data
     else:
         # Handle unhandled 500 internal server errors cleanly without crashing/leaking code details
-        response = Response({
-            "status": "error",
-            "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
-            "message": "Internal server error. Please try again later.",
-            "errors": str(exc)
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response = Response(
+            {
+                "status": "error",
+                "code": status.HTTP_500_INTERNAL_SERVER_ERROR,
+                "message": "Internal server error. Please try again later.",
+                "errors": str(exc),
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     return response
