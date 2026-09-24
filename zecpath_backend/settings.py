@@ -54,7 +54,7 @@ else:
     CACHES = {
         "default": {
             "BACKEND": "django.core.cache.backends.redis.RedisCache",
-            "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1"),
+            "LOCATION": config("REDIS_URL", default="redis://127.0.0.1:6379/1?protocol=2"),
             "TIMEOUT": 300,  # 5 minutes query cache
         }
     }
@@ -217,10 +217,10 @@ DEFAULT_FROM_EMAIL = "Zecpath Automated Assistant <no-reply@zecpath.com>"
 
 # Celery Configuration (Redis Broker & Result Backend)
 CELERY_BROKER_URL = config(
-    "REDIS_URL", default=config("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/0")
+    "REDIS_URL", default=config("CELERY_BROKER_URL", default="redis://127.0.0.1:6379/0?protocol=2")
 )
 CELERY_RESULT_BACKEND = config(
-    "REDIS_URL", default=config("CELERY_RESULT_BACKEND", default="redis://127.0.0.1:6379/0")
+    "REDIS_URL", default=config("CELERY_RESULT_BACKEND", default="redis://127.0.0.1:6379/0?protocol=2")
 )
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
