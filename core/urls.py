@@ -448,14 +448,16 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59, 61, 62, 63, 64, 65, 67, 68 & 69 Routes
+# Day 53, 55, 59, 61, 62, 63, 64, 65, 67, 68, 69 & 70 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
                     SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView,
                     SystemDesignSimulationAPIView, DebuggingDiagnosticAPIView,
                     IncidentRecoveryAPIView, MockInterviewScorecardAPIView,
                     CandidateSmartRecommendationsAPIView,
-                    FinalProjectSubmissionAuditAPIView)
+                    FinalProjectSubmissionAuditAPIView,
+                    FinalCertificationAPIView)
+
 
 
 
@@ -534,7 +536,14 @@ urlpatterns += [
         FinalProjectSubmissionAuditAPIView.as_view(),
         name="project-final-submission-audit",
     ),
+    # Day 70: Final Certification Graduation Record
+    path(
+        "certification/graduation-record/",
+        FinalCertificationAPIView.as_view(),
+        name="certification-graduation-record",
+    ),
 ]
+
 
 
 

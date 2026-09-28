@@ -2922,6 +2922,34 @@ class FinalProjectSubmissionAuditAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 70: FINAL CERTIFICATION & GRADUATION API
+# ==============================================================================
+class FinalCertificationAPIView(APIView):
+    """Issues final verified internship graduation payload and performance summary."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "status": "GRADUATED",
+            "certification": {
+                "candidate": getattr(request.user, "email", "intern@zecpath.com"),
+                "curriculum": "Zecpath 70-Day AI Backend & Systems Engineering Internship",
+                "final_grade": "A+",
+                "completion_date": "2026-09-28",
+                "credential_id": "ZEC-ENG-70D-2026-9901",
+                "verified_capabilities": [
+                    "Django REST Framework & PostgreSQL B-Tree Index Optimization",
+                    "Asynchronous Background Job Queues (Celery & Redis)",
+                    "Production Deployment (Nginx Reverse Proxy, Gunicorn Systemd)",
+                    "Payment Gateway Integration & Webhook Security (Stripe/Razorpay)",
+                    "AI Screening Pipelines & Automated Voice Interview Engines"
+                ]
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 
