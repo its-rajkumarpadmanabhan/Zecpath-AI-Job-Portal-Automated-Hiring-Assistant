@@ -448,12 +448,14 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59, 61, 62, 63, 64, 65 & 67 Routes
+# Day 53, 55, 59, 61, 62, 63, 64, 65, 67 & 68 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
                     SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView,
                     SystemDesignSimulationAPIView, DebuggingDiagnosticAPIView,
-                    IncidentRecoveryAPIView, MockInterviewScorecardAPIView)
+                    IncidentRecoveryAPIView, MockInterviewScorecardAPIView,
+                    CandidateSmartRecommendationsAPIView)
+
 
 
 
@@ -518,7 +520,14 @@ urlpatterns += [
         MockInterviewScorecardAPIView.as_view(),
         name="interview-mock-evaluation",
     ),
+    # Day 68: Candidate Smart Recommendations
+    path(
+        "jobs/smart-recommendations/",
+        CandidateSmartRecommendationsAPIView.as_view(),
+        name="jobs-smart-recommendations",
+    ),
 ]
+
 
 
 

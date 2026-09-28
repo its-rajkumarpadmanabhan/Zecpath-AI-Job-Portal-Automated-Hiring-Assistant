@@ -2877,6 +2877,30 @@ class MockInterviewScorecardAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 68: SMART JOB RECOMMENDATIONS API
+# ==============================================================================
+from core.services.recommendation_engine import SmartRecommendationService
+
+class CandidateSmartRecommendationsAPIView(APIView):
+    """Accepts candidate skills and returns matched job requisitions and skill gap analytics."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        skills = request.data.get("skills", ["python", "django", "drf", "postgresql"])
+        if not isinstance(skills, list):
+            return Response({"error": "skills must be an array of strings."}, status=status.HTTP_400_BAD_REQUEST)
+
+        recommendations = SmartRecommendationService.get_recommendations_for_skills(skills)
+        return Response({
+            "status": "success",
+            "candidate_skills_evaluated": skills,
+            "total_matches": len(recommendations),
+            "recommendations": recommendations
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 
