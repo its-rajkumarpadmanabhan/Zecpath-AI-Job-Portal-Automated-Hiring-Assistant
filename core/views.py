@@ -2722,3 +2722,30 @@ class FinalQASignoffAPIView(APIView):
             }
         }, status=status.HTTP_200_OK if healthy else status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+# ==============================================================================
+# DAY 61: SYSTEM ARCHITECTURE OVERVIEW API
+# ==============================================================================
+class SystemArchitectureOverviewAPIView(APIView):
+    """Returns runtime topology, module maps, and database engine parameters."""
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response({
+            "status": "success",
+            "architecture": {
+                "system_name": "Zecpath AI Automated Recruitment Engine",
+                "core_runtime": "Django 5.x / DRF / Celery 5.x / Python 3.12",
+                "database_topology": "PostgreSQL 16 with B-Tree Composite Indexing",
+                "cache_broker": "Redis 7 Cluster",
+                "cloud_storage": "AWS S3 Private Buckets with Pre-Signed URL Access",
+                "subsystems": [
+                    {"name": "Auth & RBAC", "spec": "SimpleJWT + In-memory token blacklisting"},
+                    {"name": "ATS Engine", "spec": "Asynchronous NLP Extraction + Vector Cosine Match"},
+                    {"name": "Voice AI Interview", "spec": "Twilio Media Streams + STT Transcription + LLM Scoring"},
+                    {"name": "Billing & SaaS", "spec": "Stripe/Razorpay Webhooks + HMAC SHA256 Signature Verification"}
+                ]
+            }
+        }, status=status.HTTP_200_OK)
+
+
