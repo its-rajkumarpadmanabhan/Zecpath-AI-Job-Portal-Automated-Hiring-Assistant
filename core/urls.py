@@ -448,12 +448,13 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59, 61, 62, 63, 64 & 65 Routes
+# Day 53, 55, 59, 61, 62, 63, 64, 65 & 67 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
                     SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView,
                     SystemDesignSimulationAPIView, DebuggingDiagnosticAPIView,
-                    IncidentRecoveryAPIView)
+                    IncidentRecoveryAPIView, MockInterviewScorecardAPIView)
+
 
 
 
@@ -511,7 +512,14 @@ urlpatterns += [
         IncidentRecoveryAPIView.as_view(),
         name="incident-recovery",
     ),
+    # Day 67: Mock Technical Interview Scorecard
+    path(
+        "interview/mock-evaluation/",
+        MockInterviewScorecardAPIView.as_view(),
+        name="interview-mock-evaluation",
+    ),
 ]
+
 
 
 

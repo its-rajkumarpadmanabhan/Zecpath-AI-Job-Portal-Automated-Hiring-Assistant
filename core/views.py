@@ -2851,6 +2851,33 @@ class IncidentRecoveryAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 67: MOCK TECHNICAL INTERVIEW SCORECARD API
+# ==============================================================================
+class MockInterviewScorecardAPIView(APIView):
+    """Returns candidate mock interview evaluation and competency scorecard."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "status": "success",
+            "candidate_evaluation": {
+                "candidate": getattr(request.user, "email", "intern@zecpath.com"),
+                "technical_rating": "96%",
+                "system_design_rating": "94%",
+                "code_quality_grade": "A",
+                "competencies": [
+                    {"skill": "Django ORM & Query Optimization", "status": "Advanced"},
+                    {"skill": "Asynchronous Architecture (Celery/Redis)", "status": "Advanced"},
+                    {"skill": "Payment Gateway & Webhook Security", "status": "Advanced"},
+                    {"skill": "DevOps & Production Server Hardening", "status": "Proficient"}
+                ],
+                "recommendation": "Ready for Mid-Level Backend / Software Engineer Roles"
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 
