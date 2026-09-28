@@ -448,11 +448,13 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59, 61, 62, 63 & 64 Routes
+# Day 53, 55, 59, 61, 62, 63, 64 & 65 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
                     SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView,
-                    SystemDesignSimulationAPIView, DebuggingDiagnosticAPIView)
+                    SystemDesignSimulationAPIView, DebuggingDiagnosticAPIView,
+                    IncidentRecoveryAPIView)
+
 
 
 
@@ -503,7 +505,14 @@ urlpatterns += [
         DebuggingDiagnosticAPIView.as_view(),
         name="debugging-diagnostics",
     ),
+    # Day 65: Incident Recovery
+    path(
+        "incident/recovery/",
+        IncidentRecoveryAPIView.as_view(),
+        name="incident-recovery",
+    ),
 ]
+
 
 
 

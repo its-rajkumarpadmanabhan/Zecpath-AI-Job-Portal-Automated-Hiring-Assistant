@@ -2823,6 +2823,35 @@ class DebuggingDiagnosticAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 65: PRODUCTION HEALTH & INCIDENT SIMULATION API
+# ==============================================================================
+class IncidentRecoveryAPIView(APIView):
+    """Provides incident reporting and automated service health verification."""
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        action = request.data.get("action", "verify_health")
+        
+        if action == "replay_failed_webhooks":
+            # Simulate replaying failed payment webhook logs
+            return Response({
+                "status": "success",
+                "action": "replay_failed_webhooks",
+                "replayed_transactions_count": 0,
+                "recovery_state": "All transactions in sync"
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "status": "success",
+            "cluster_state": "HEALTHY",
+            "circuit_breaker": "CLOSED",
+            "active_incidents": 0,
+            "last_incident": "INC-20260928-GATEWAY-DOWN (Resolved)"
+        }, status=status.HTTP_200_OK)
+
+
+
 
 
 
