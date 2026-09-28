@@ -2749,3 +2749,23 @@ class SystemArchitectureOverviewAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 62: BACKEND CONCEPTS AUDIT API
+# ==============================================================================
+class BackendConceptsAuditAPIView(APIView):
+    """Provides key architectural answers and verification stats for backend interview concepts."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "status": "success",
+            "concepts_verified": {
+                "orm_optimization": "select_related, prefetch_related, select_for_update row-locks",
+                "jwt_strategy": "15m access / 7d refresh rotation + Redis blacklist",
+                "scalability_topology": "Horizontal Gunicorn workers behind Nginx + Redis task queue",
+                "caching_strategy": "Two-tier (DRF template cache + Redis hot-key store)"
+            }
+        }, status=status.HTTP_200_OK)
+
+
+

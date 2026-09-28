@@ -448,10 +448,11 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59 & 61 Routes
+# Day 53, 55, 59, 61 & 62 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
-                    SystemArchitectureOverviewAPIView)
+                    SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView)
+
 
 
 
@@ -481,6 +482,13 @@ urlpatterns += [
         SystemArchitectureOverviewAPIView.as_view(),
         name="system-architecture-overview",
     ),
+    # Day 62: Backend Concepts Audit
+    path(
+        "interview/backend-concepts/",
+        BackendConceptsAuditAPIView.as_view(),
+        name="interview-backend-concepts",
+    ),
 ]
+
 
 
