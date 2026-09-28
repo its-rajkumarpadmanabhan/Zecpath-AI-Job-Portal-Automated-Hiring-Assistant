@@ -448,11 +448,12 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59, 61, 62 & 63 Routes
+# Day 53, 55, 59, 61, 62, 63 & 64 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
                     SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView,
-                    SystemDesignSimulationAPIView)
+                    SystemDesignSimulationAPIView, DebuggingDiagnosticAPIView)
+
 
 
 
@@ -496,7 +497,14 @@ urlpatterns += [
         SystemDesignSimulationAPIView.as_view(),
         name="system-design-benchmarks",
     ),
+    # Day 64: Debugging Diagnostics
+    path(
+        "debugging/diagnostics/",
+        DebuggingDiagnosticAPIView.as_view(),
+        name="debugging-diagnostics",
+    ),
 ]
+
 
 
 
