@@ -448,10 +448,12 @@ urlpatterns += [
     ),
 ]
 
-# Day 53, 55, 59, 61 & 62 Routes
+# Day 53, 55, 59, 61, 62 & 63 Routes
 from .views import (ResumePresignedUploadAPIView, ResumeSecureAccessAPIView,
                     SecurityAuditReportAPIView, FinalQASignoffAPIView,
-                    SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView)
+                    SystemArchitectureOverviewAPIView, BackendConceptsAuditAPIView,
+                    SystemDesignSimulationAPIView)
+
 
 
 
@@ -488,7 +490,14 @@ urlpatterns += [
         BackendConceptsAuditAPIView.as_view(),
         name="interview-backend-concepts",
     ),
+    # Day 63: System Design Benchmarks
+    path(
+        "system-design/benchmarks/",
+        SystemDesignSimulationAPIView.as_view(),
+        name="system-design-benchmarks",
+    ),
 ]
+
 
 
 

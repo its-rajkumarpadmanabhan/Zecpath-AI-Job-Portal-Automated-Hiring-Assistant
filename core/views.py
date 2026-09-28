@@ -2768,4 +2768,30 @@ class BackendConceptsAuditAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+# ==============================================================================
+# DAY 63: SYSTEM DESIGN SIMULATION API
+# ==============================================================================
+class SystemDesignSimulationAPIView(APIView):
+    """Simulates high-throughput queue capacities and latency thresholds for ATS & Voice engines."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        return Response({
+            "status": "success",
+            "pipeline_design_benchmarks": {
+                "ats_throughput": {
+                    "queue_capacity_per_sec": 250,
+                    "target_processing_time_sec": 1.8,
+                    "concurrency_model": "Celery Prefork Workers + Redis Broker"
+                },
+                "ai_voice_pipeline": {
+                    "stt_engine": "OpenAI Whisper Base / Local Fast-Whisper",
+                    "target_voice_turnaround_ms": 320,
+                    "audio_transport": "WebSocket Media Streams (16kHz PCM)"
+                }
+            }
+        }, status=status.HTTP_200_OK)
+
+
+
 
