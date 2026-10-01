@@ -316,6 +316,6 @@ celery -A zecpath_backend beat -l info
 
 ---
 
-## 📄 License
+## 📄 Project Submission
 
-This project is licensed under the **MIT License**.
+This project is submitted by RAJKUMAR PR
